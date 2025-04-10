@@ -2,8 +2,6 @@ import os
 import json
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_community.document_loaders import JSONLoader
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 from langchain_core.output_parsers import CommaSeparatedListOutputParser
