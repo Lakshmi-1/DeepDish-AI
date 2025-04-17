@@ -1,7 +1,9 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-mint-500: oklch(0.72 0.11 178);
+  --color-green: #BBCEA8;
+  --color-black: #2E2E3A;
+  --color-purple: #8A7198;
 }
 
 :root {
