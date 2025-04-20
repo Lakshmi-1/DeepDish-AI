@@ -2,33 +2,32 @@ import { useState, useEffect, useRef } from 'react';
 import pizzaIcon from './assets/pizza.png';
 import background from './assets/background.jpg';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowUp } from '@fortawesome/free-solid-svg-icons';
-import { faSquare } from '@fortawesome/free-solid-svg-icons';
+import { faArrowUp, faSquare } from '@fortawesome/free-solid-svg-icons';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [initial, setInitial] = useState(true);
+
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const handleQueryChange = (e) => {
-    setQuery(e.target.value);
-  };
+  const handleQueryChange = (e) => setQuery(e.target.value);
 
   const fetchQueryResult = async () => {
-    if (!query) return;
+    if (!query.trim()) return;
 
     setLoading(true);
     setMessages((prev) => [...prev, { sender: 'user', text: query }]);
     setQuery('');
+    setInitial(false);
 
     try {
       const response = await fetch('http://127.0.0.1:5000/query', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
       });
 
@@ -68,28 +67,32 @@ function App() {
   }, [query]);
 
   const getMessageClass = (text) => {
-    const lines = text.split('\n').length; 
-    const t = Math.floor(text.length / 30); 
-    return lines > 1 || t > 1 ? 'rounded-lg' : 'rounded-full'; 
+    const lines = text.split('\n').length;
+    const t = Math.floor(text.length / 30);
+    return lines > 1 || t > 1 ? 'rounded-lg' : 'rounded-full';
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen relative">
+      {/* Background */}
       <div
         className="fixed top-0 left-0 w-full opacity-5 h-full bg-cover bg-center z-0"
         style={{ backgroundImage: `url(${background})` }}
       ></div>
 
+      {/* Header */}
       <div className="fixed flex items-center w-full p-4 text-3xl font-bold bg-green text-black rounded-b-md z-50">
         <img src={pizzaIcon} className="justify-center w-[30px] h-[30px] ml-2 mr-5" />
         DeepDish AI
       </div>
-      <div className="flex-1 overflow-auto pt-[80px] pb-[120px] relative flex justify-center">
+
+      {/* Message Area */}
+      <div className="flex-1 overflow-auto pt-[80px] pb-[120px] relative flex justify-center z-10">
         <div className="w-full max-w-3xl px-4 space-y-4">
           {messages.map((msg, index) => (
             <div key={index} className={`flex items-center ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <p
-                className={`px-4 py-2 ${getMessageClass(msg.text)} ${msg.sender === 'user' ? 'bg-purple text-white' : 'bg-gray-300 text-black'} break-words whitespace-pre-wrap max-w-[500px]`}
+                className={`px-4 py-2 ${getMessageClass(msg.text)} ${msg.sender === 'user' ? 'bg-purple text-white' : 'bg-gray-300 text-black'} break-words whitespace-pre-wrap max-w-[500px] transition-all duration-300`}
               >
                 {msg.text}
               </p>
@@ -105,38 +108,91 @@ function App() {
           <div ref={messagesEndRef} />
         </div>
       </div>
-      <form
-        onSubmit={handleSubmit}
-        className="fixed bottom-0 w-full flex items-center bg-white justify-center px-4 pb-4 z-50"
-      >
-        <div className="w-full max-w-3xl flex gap-2">
-          <div className="flex-1 outline bg-gray-200 rounded-lg p-2 flex">
-            <textarea
-              ref={textareaRef}
-              value={query}
-              onChange={handleQueryChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }
-              }}
-              className="w-full p-2 bg-transparent focus:outline-none resize-none"
-              placeholder="Type your message..."
-              rows="1"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              disabled={loading}
-              type="submit"
-              className={`w-[48px] h-[48px] flex items-center justify-center text-white rounded-full bg-black hover:bg-gray-500 cursor-pointer`}
-            >
-              <FontAwesomeIcon icon={loading ? faSquare : faArrowUp} />
-            </button>
-          </div>
-        </div>
-      </form>
+
+      {/* Input Area */}
+      <AnimatePresence>
+        {initial ? (
+          <motion.div
+            key="initial-input"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-50 backdrop-blur"
+          >
+            <img src={pizzaIcon} className="w-[100px] h-[100px] mb-4" />
+            <h1 className="text-4xl font-bold mb-4 text-black">Welcome to DeepDish AI!</h1>
+            <h2 className="text-2xl font-semibold mb-4 text-black">How can I help you?</h2>
+            <form onSubmit={handleSubmit} className="w-full max-w-xl px-4">
+              <div className="flex gap-2">
+                <div className="flex-1 bg-gray-200 rounded-lg p-2 flex">
+                  <textarea
+                    ref={textareaRef}
+                    value={query}
+                    onChange={handleQueryChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e);
+                      }
+                    }}
+                    className="w-full p-2 bg-transparent focus:outline-none resize-none"
+                    placeholder="Type your message..."
+                    rows="1"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    disabled={loading}
+                    type="submit"
+                    className="w-[48px] h-[48px] flex items-center justify-center text-white rounded-full bg-black hover:bg-gray-500 transition-all"
+                  >
+                    <FontAwesomeIcon icon={loading ? faSquare : faArrowUp} />
+                  </button>
+                </div>
+              </div>
+            </form>
+          </motion.div>
+        ) : (
+          <motion.form
+            key="bottom-input"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.5 }}
+            onSubmit={handleSubmit}
+            className="fixed bottom-0 w-full flex items-center bg-white justify-center px-4 pb-4 z-50"
+          >
+            <div className="w-full max-w-3xl flex gap-2">
+              <div className="flex-1 outline bg-gray-200 rounded-lg p-2 flex">
+                <textarea
+                  ref={textareaRef}
+                  value={query}
+                  onChange={handleQueryChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  className="w-full p-2 bg-transparent focus:outline-none resize-none"
+                  placeholder="Type your message..."
+                  rows="1"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  disabled={loading}
+                  type="submit"
+                  className="w-[48px] h-[48px] flex items-center justify-center text-white rounded-full bg-black hover:bg-gray-500 transition-all"
+                >
+                  <FontAwesomeIcon icon={loading ? faSquare : faArrowUp} />
+                </button>
+              </div>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
