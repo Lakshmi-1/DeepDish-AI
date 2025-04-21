@@ -74,19 +74,19 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen relative">
-      {/* Background */}
+
       <div
         className="fixed top-0 left-0 w-full opacity-5 h-full bg-cover bg-center z-0"
         style={{ backgroundImage: `url(${background})` }}
       ></div>
 
-      {/* Header */}
+
       <div className="fixed flex items-center w-full p-4 text-3xl font-bold bg-green text-black rounded-b-md z-50">
         <img src={pizzaIcon} className="justify-center w-[30px] h-[30px] ml-2 mr-5" />
         DeepDish AI
       </div>
 
-      {/* Message Area */}
+ 
       <div className="flex-1 overflow-auto pt-[80px] pb-[120px] relative flex justify-center z-10">
         <div className="w-full max-w-3xl px-4 space-y-4">
           {messages.map((msg, index) => (
@@ -109,7 +109,6 @@ function App() {
         </div>
       </div>
 
-      {/* Input Area */}
       <AnimatePresence>
         {initial ? (
           <motion.div
