@@ -1,27 +1,73 @@
 import spacy
 from spacy.pipeline import EntityRuler
+import inflect
+from rag import graph
+
+def build_patterns():
+    ingredients_query = """
+    MATCH (i:Ingredient)
+    RETURN i.name AS name
+    """
+    records = graph.query(ingredients_query)
+    ingredients = [record['name'].lower() for record in records]
+    
+    cuisine_query = """
+    MATCH (i:Cuisine)
+    RETURN i.value AS value
+    """
+    records = graph.query(cuisine_query)
+    origins = [record['value'].lower() for record in records]
+    
+    nlp = spacy.load("en_core_web_sm")
+    ruler = nlp.add_pipe("entity_ruler", before="ner")
+    
+    patterns = [
+        {"label": "RATING_VALUE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "stars"}]},
+        {"label": "RATING_VALUE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "star"}]},
+        {"label": "RATING_VALUE", "pattern": [{"LIKE_NUM": True}, {"TEXT": "★"}]},
+
+        {"label": "DIET_LABEL", "pattern": [{"LOWER": "healthy"}]},
+        {"label": "DIET_LABEL", "pattern": [{"LOWER": "vegan"}]},
+        {"label": "DIET_LABEL", "pattern": [{"LOWER": "vegetarian"}]},
+    ]
+    for origin in origins:
+        patterns.append({"label": "CUISINE", "pattern": [{"LOWER": f"{origin}"}]})
+    for ingredient in ingredients:
+        patterns.append({"label": "INGREDIENT", "pattern": [{"LOWER": f"{ingredient}"}]})
+    ruler.add_patterns(patterns)
+    return nlp
 
 
-nlp = spacy.load("en_core_web_sm")
-ruler = nlp.add_pipe("entity_ruler", before="ner")
-origins = ["greek", "american", "italian", "japanese", "indian", "mexican"]
-ingredients = ["pork", "chicken", "broccoli", "lettuce"]
-patterns = [
-    {"label": "RATING_VALUE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "stars"}]},
-    {"label": "RATING_VALUE", "pattern": [{"LIKE_NUM": True}, {"LOWER": "star"}]},
-    {"label": "RATING_VALUE", "pattern": [{"LIKE_NUM": True}, {"TEXT": "★"}]},
+def extract_recipe_criteria(doc):
+    cuisine = None
+    ingredients = []
+    max_time = None
+    healthy = None
+    
+    m = inflect.engine()
 
-    {"label": "DIET_LABEL", "pattern": [{"LOWER": "healthy"}]},
-    {"label": "DIET_LABEL", "pattern": [{"LOWER": "vegan"}]},
-    {"label": "DIET_LABEL", "pattern": [{"LOWER": "vegetarian"}]},
-]
-for origin in origins:
-    patterns.append({"label": "CUISINE", "pattern": [{"LOWER": f"{origin}"}]})
-for ingredient in ingredients:
-    patterns.append({"label": "INGREDIENT", "pattern": [{"LOWER": f"{ingredient}"}]})
-ruler.add_patterns(patterns)
+    # check entities
+    for ent in doc.ents:
+        if ent.label_ == "TIME":
+            if "minute" in ent.text:
+                max_time = int(''.join(filter(str.isdigit, ent.text)))
+        elif ent.label_ == "CUISINE":
+            cuisine = ent.text.capitalize()
+        elif ent.label_ == "INGREDIENT":
+            ingredients.append(ent.lemma_)
+            ingredients.append(m.plural(ent.lemma_))
+        elif ent.label_ == "DIET_LABEL":
+            diet = ent.text.capitalize()
 
-
+    return {
+        "cuisine": cuisine,
+        "ingredients": ingredients,
+        "max_time": max_time,
+        "healthy": healthy,
+    }
+    
+    
+"""
 def extract_restaurant_criteria(doc):
     diet = None
     cuisine = None
@@ -45,32 +91,6 @@ def extract_restaurant_criteria(doc):
         "cuisine": cuisine,
         "rating": rating,
         "max_time": max_time
-    }
-
-
-def extract_recipe_criteria(doc):
-    cuisine = None
-    ingredients = []
-    max_time = None
-    healthy = None
-
-    # Entities
-    for ent in doc.ents:
-        if ent.label_ == "TIME":
-            if "minute" in ent.text:
-                max_time = int(''.join(filter(str.isdigit, ent.text)))
-        elif ent.label_ == "CUISINE":
-            cuisine = ent.text.capitalize()
-        elif ent.label_ == "INGREDIENT":
-            ingredients.append(ent.text)
-        elif ent.label_ == "DIET_LABEL":
-            diet = ent.text.capitalize()
-
-    return {
-        "cuisine": cuisine,
-        "ingredients": ingredients,
-        "max_time": max_time,
-        "healthy": healthy,
     }
 
 
@@ -132,3 +152,4 @@ z = generate_cypher_query(x, "recipe")
 print(text)
 print(x)
 print(z)
+"""

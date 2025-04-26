@@ -85,5 +85,10 @@ graph_chain = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
-async def query_cypher(query):
+async def query_cypher(query, extracted_ingredients=None):
+    if extracted_ingredients:
+        ingredient_text = ", ".join(extracted_ingredients)
+        query += f" Please make sure the cypher query checks for these ingredients: {ingredient_text}."
     return graph_chain.invoke({"query": query})
+
+
