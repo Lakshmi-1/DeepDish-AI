@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import pizzaIcon from './assets/pizza.png';
 import background from './assets/background.jpg';
+import personIcon from './assets/person.png';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowUp, faSquare } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +11,15 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [initial, setInitial] = useState(true);
+  const [showPopup, setShowPopup] = useState(false);
+  const [namePopupInput, setNamePopupInput] = useState('');
+  const [allergiesPopupInput, setAllergiesPopupInput] = useState('');
+  const [location, setLocation] = useState(null);
+  const [locationError, setLocationError] = useState(false);
+  const [city, setCity] = useState('');
+
+
+
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -65,12 +75,59 @@ function App() {
   useEffect(() => {
     adjustTextareaHeight();
   }, [query]);
+  useEffect(() => {
+    const stopWatching = getLocation();
+    return () => {
+      if (stopWatching) stopWatching();
+    };
+  }, []);
+
+
 
   const getMessageClass = (text) => {
     const lines = text.split('\n').length;
     const t = Math.floor(text.length / 30);
     return lines > 1 || t > 1 ? 'rounded-lg' : 'rounded-full';
   };
+
+const getLocation = () => {
+  setLocation(null);
+  setLocationError(false);
+  if (navigator.geolocation) {
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        setLocation({ latitude: lat, longitude: lon });
+        setLocationError(false);
+
+        // Fetch city name
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+          const data = await response.json();
+          if (data.address) {
+            const cityName = data.address.city || data.address.town || data.address.village || data.address.state;
+            setCity(cityName);
+          }
+        } catch (error) {
+          console.error('Error fetching city name:', error);
+        }
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setLocationError(true);
+      }
+    );
+
+    // Cleanup watcher if needed
+    return () => navigator.geolocation.clearWatch(watchId);
+  } else {
+    console.error('Geolocation not supported');
+    setLocationError(true);
+  }
+};
+
+
 
   return (
     <div className="flex flex-col min-h-screen relative">
@@ -81,10 +138,80 @@ function App() {
       ></div>
 
 
-      <div className="fixed flex items-center w-full p-4 text-3xl font-bold bg-green text-black rounded-b-md z-50">
-        <img src={pizzaIcon} className="justify-center w-[30px] h-[30px] ml-2 mr-5" />
-        DeepDish AI
+      <div className="fixed flex items-center justify-between w-full p-4 text-3xl font-bold bg-green text-black rounded-b-md z-50">
+        <div className="flex items-center">
+            <img src={pizzaIcon} className="w-[30px] h-[30px] ml-2 mr-5" />
+            DeepDish AI
+        </div>
+            <button
+                onClick={() => setShowPopup(true)}
+                className="flex items-center justify-center w-[40px] h-[40px] mr-2 bg-white rounded-full shadow-md hover:bg-gray-200"
+            >
+                <img src={personIcon} className="w-[25px] h-[25px]" alt="Profile" />
+            </button>
       </div>
+
+      {showPopup && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-50 backdrop-blur">
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+                <h2 className="text-2xl font-bold mb-4">Profile</h2>
+
+               <p className= "text-black mb-4">Personalize Name: </p>
+                <input
+                    type="text"
+                    value={namePopupInput}
+                    onChange={(e) => setNamePopupInput(e.target.value)}
+                    placeholder="Enter something..."
+                    className="w-full p-2 border rounded mb-4"
+                />
+
+
+                <p className= "text-black mb-4">Enter Allergies - Please separate by comma: </p>
+                <input
+                    type="text"
+                    value={allergiesPopupInput}
+                    onChange={(e) => setAllergiesPopupInput(e.target.value)}
+                    placeholder="Enter something..."
+                    className="w-full p-2 border rounded mb-4"
+                />
+
+                <div className="text-sm text-black ml-5">
+                  {location ? (
+                    <div className="flex items-center space-x-2">
+                      <span>📍</span>
+                      {city ? (
+                        <span>{city}</span>
+                      ) : (
+                        <span>Lat: {location.latitude.toFixed(2)}, Lon: {location.longitude.toFixed(2)}</span>
+                      )}
+                    </div>
+                  ) : locationError ? (
+                    <button
+                      onClick={getLocation}
+                      className="px-2 py-1 bg-white text-green-700 rounded shadow hover:bg-gray-200 text-xs"
+                    >
+                      Enable Location
+                    </button>
+                  ) : (
+                    <p>Loading location...</p>
+                  )}
+                </div>
+
+
+
+
+                <button
+                    onClick={() => setShowPopup(false)}
+                    className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+      )}
+
+
+
 
  
       <div className="flex-1 overflow-auto pt-[80px] pb-[120px] relative flex justify-center z-10">
