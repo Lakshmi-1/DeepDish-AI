@@ -4,11 +4,18 @@ import os
 import random
 from datetime import datetime
 import openai
-from sentence_transformers import SentenceTransformer, util
+#from sentence_transformers import SentenceTransformer, util
 import re
 import json
 
 client = OpenAI()
+
+def get_last_k_messages(memory, k = 5):
+    # Get the underlying messages
+    messages = memory.chat_memory.messages
+    # Safely slice the last k (or fewer) messages
+    return messages[-k:] if k <= len(messages) else messages
+
 
 def ask_openai(user_input, system_instruction, temperature=0.0):
     response = client.chat.completions.create(
@@ -23,12 +30,13 @@ def ask_openai(user_input, system_instruction, temperature=0.0):
 
 class intent_parser(object):
   def __init__(self):
-    self.global_intents = ['Find a recipe', 'Find a restaurant', 'Quit Chat', 'None of the Above'] #we can add something to view previous chats here
-    self.conversational_intents = ['Express Gratitude', 'Ask a Question', 'None of the Above']
-    self.specific_intents = ['Find a healthy recipe', 'Find a recipe that includes certain ingredients', 'Find a recipe from a certain culture', 'None of the Above']
-
+    self.global_intents = ['Find a recipe', 'Find a restaurant', 'Quit Chat', 'Greetings', 'Express Gratitude',
+                           'Ask a Question', 'Other']
+    
+    self.question_intent = ['Food Related Question', 'Non Food Related Question']
+    
   def parse_global_user_intent(self, user_input):
-    system_instruction = 'Please classify the user\'s intent into one of the following categories: ' + ', '.join(self.global_intents)
+    system_instruction = 'Please classify the user\'s intent into one of the following categories. Please provide only the option you choose: ' + ', '.join(self.global_intents)
     global_intent = ask_openai(user_input, system_instruction)
 
     normalized_intents = [intent.lower() for intent in self.global_intents]
@@ -42,51 +50,56 @@ class intent_parser(object):
 
     intent_index = normalized_intents.index(normalized_response)
     return self.global_intents[intent_index]
+  
+  
+  def respond_to_greeting(self, user_input): #async
+    system_instruction = """You are a friendly assistant that can help users find recipes or resturnats. 
+    Please give a friendly response to this user greeting and let them know some of the things that you are able to do such as find a healhty recipe, find a recipe with certain ingredients, 
+    find a resturant, etc."""
+    greeting_response = ask_openai(user_input, system_instruction)
+    
+    return greeting_response
+  
+  def respond_to_quit_chat(self, user_input):
+    system_instruction = """You are a friendly assistant that can help users find recipes or resturnats. 
+    The user has expressed that they are done with their current session. Please give them a kind farewell and let them know you are here to help for any future cooking needs"""
+    quit_chat_response = ask_openai(user_input, system_instruction)
 
-  def parse_conversational_intent(self, user_input):
-    system_instruction = 'Please classify the user\'s intent into one of the following categories: ' + ', '.join(self.conversational_intents)
-    conversational_intent = ask_openai(user_input, system_instruction)
+    return quit_chat_response
 
-    normalized_intents = [intent.lower() for intent in self.conversational_intents]
-    normalized_response = conversational_intent.strip().lower()
+  def respond_to_gratitude(self, user_input):
+    system_instruction = """You are a friendly assistant that can help users find recipes or resturnats. 
+    The user has expressed gratitude for your help. Please provide a friendly answer and let them know you can continue to help them or help them with any new food questions"""
+    gratitude_response = ask_openai(user_input, system_instruction)
 
-    if normalized_response not in normalized_intents:
-        conversational_intent = ask_openai(user_input, system_instruction, temperature=0.5)
-        normalized_response = conversational_intent.strip().lower()
+    return gratitude_response
+  def respond_to_question(self, user_input):
+    system_instruction = """You are an assistant that determines whether a user has asked a food related or non food related question. 
+    Please respond exactly Food Related Question or Non Food Related Question"""
+    food_question_response = ask_openai(user_input, system_instruction)
+    return food_question_response
+  
+  def respond_to_food_question(self, user_input):
+    system_instruction = """You are a friendly assistant that can help users answer food related questions. 
+    Please refer to the current user question and previous input to answer as accurately as possible. 
+    Only respond to the most recent user question and use previous input as context"""
+    food_question_response = ask_openai(user_input, system_instruction)
+    return food_question_response
+    
+  def respond_to_NonFood_question(self, user_input):
+    system_instruction = """You are a friendly assistant that can help users find recipes or resturnats. 
+    The user has asked a non food related question. Please let them know that unfortunately you cannot help with this as you are designed to only help with food related tasks"""
+    NonFood_response = ask_openai(user_input, system_instruction)
 
-    if normalized_response not in normalized_intents:
-        return 'unknown'
+    return NonFood_response
+  
+  def respond_to_other(self, user_input):
+    system_instruction = """You are a friendly assistant that can help users find recipes or resturnats. 
+    The user has given a response that is irrelevant to food. Please redirct the user by informing them that you are only trained for food related tasks."""
+    other_response = ask_openai(user_input, system_instruction)
 
-    intent_index = normalized_intents.index(normalized_response)
-    return self.conversational_intents[intent_index]
-
-  def parse_specific_intent(self, user_input):
-    system_instruction = 'Please classify the user\'s intent into one of the following categories: ' + ', '.join(self.specific_intents)
-    specific_intent = ask_openai(user_input, system_instruction)
-
-    normalized_intents = [intent.lower() for intent in self.specific_intents]
-    normalized_response = specific_intent.strip().lower()
-
-    if normalized_response not in normalized_intents:
-        specific_intent = ask_openai(user_input, system_instruction, temperature=0.5)
-        normalized_response = specific_intent.strip().lower()
-
-    if normalized_response not in normalized_intents:
-        return 'unknown'
-
-    intent_index = normalized_intents.index(normalized_response)
-    return self.specific_intents[intent_index]
-  def parse_ingredients(self, user_input):
-    system_instruction = 'You will be presented with a user input. Your goal is to find any words that could be recipe ingredients in the input and return them in a comma seperated list. If you cannot find ingredients return []'
-    ingredients = ask_openai(user_input, system_instruction)
-    return ingredients
-
-  def parse_all_intents(self, user_input):
-    global_intent = self.parse_global_user_intent(user_input)
-    conversational_intent = self.parse_conversational_intent(user_input)
-    specific_intent = self.parse_specific_intent(user_input)
-
-    return global_intent, conversational_intent, specific_intent
+    return other_response
+     
 
 class backup_IR(object):
     def __init__(self, backup_recipe_flat_file):
