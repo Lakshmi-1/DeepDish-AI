@@ -4,6 +4,8 @@ import inflect
 from rag import graph
 
 def build_patterns():
+    m = inflect.engine()
+    
     ingredients_query = """
     MATCH (i:Ingredient)
     RETURN i.name AS name
@@ -18,6 +20,13 @@ def build_patterns():
     records = graph.query(cuisine_query)
     origins = [record['value'].lower() for record in records]
     
+    category_query = """
+    MATCH (i:Category)
+    RETURN i.value AS value
+    """
+    records = graph.query(category_query)
+    categories = [record['value'].lower() for record in records]
+    
     nlp = spacy.load("en_core_web_sm")
     ruler = nlp.add_pipe("entity_ruler", before="ner")
     
@@ -30,20 +39,39 @@ def build_patterns():
         {"label": "DIET_LABEL", "pattern": [{"LOWER": "vegan"}]},
         {"label": "DIET_LABEL", "pattern": [{"LOWER": "vegetarian"}]},
     ]
+    
     for origin in origins:
         patterns.append({"label": "CUISINE", "pattern": [{"LOWER": f"{origin}"}]})
+        
     for ingredient in ingredients:
-        patterns.append({"label": "INGREDIENT", "pattern": [{"LOWER": f"{ingredient}"}]})
+        if(not m.singular_noun(ingredient)):
+            patterns.append({"label": "INGREDIENT", "pattern": [{"LOWER": f"{ingredient}"}]})
+            patterns.append({"label": "INGREDIENT", "pattern": [{"LOWER": f"{m.plural(ingredient)}"}]})
+        else:
+            patterns.append({"label": "INGREDIENT", "pattern": [{"LOWER": f"{m.singular_noun(ingredient)}"}]})
+            patterns.append({"label": "INGREDIENT", "pattern": [{"LOWER": f"{ingredient}"}]})
+            
+    for category in categories:
+        if(not m.singular_noun(category)):
+            patterns.append({"label": "CATEGORY", "pattern": [{"LOWER": f"{category}"}]})
+            patterns.append({"label": "CATEGORY", "pattern": [{"LOWER": f"{m.plural(category)}"}]})
+        else:
+            patterns.append({"label": "CATEGORY", "pattern": [{"LOWER": f"{m.singular_noun(category)}"}]})
+            patterns.append({"label": "CATEGORY", "pattern": [{"LOWER": f"{category}"}]})
+
+            
+        
+        
     ruler.add_patterns(patterns)
     return nlp
 
 
 def extract_recipe_criteria(doc):
-    cuisine = None
+    cuisine = []
     ingredients = []
     max_time = None
     healthy = None
-    
+    category = []
     m = inflect.engine()
 
     # check entities
@@ -52,14 +80,18 @@ def extract_recipe_criteria(doc):
             if "minute" in ent.text:
                 max_time = int(''.join(filter(str.isdigit, ent.text)))
         elif ent.label_ == "CUISINE":
-            cuisine = ent.text.capitalize()
+            cuisine.append(ent.text.capitalize())
         elif ent.label_ == "INGREDIENT":
             ingredients.append(ent.lemma_)
             ingredients.append(m.plural(ent.lemma_))
         elif ent.label_ == "DIET_LABEL":
             diet = ent.text.capitalize()
+        elif ent.label_ == "CATEGORY":
+            category.append(ent.lemma_)
+            category.append(m.plural(ent.lemma_))
 
     return {
+        "category": category,
         "cuisine": cuisine,
         "ingredients": ingredients,
         "max_time": max_time,

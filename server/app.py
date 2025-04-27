@@ -35,14 +35,13 @@ async def query():
         # Get lemmatized ingredients using NER
         doc = nlp(user_query)
         criteria = extract_recipe_criteria(doc)
-        ingredients = criteria.get("ingredients", [])
 
         # Await the async query_cypher function
         chat_history_msgs = memory.load_memory_variables({})["chat_history"]
         chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
         question_with_memory = chat_history_str + f"\nUser: {user_query}"
-
-        result = await query_cypher({"query": question_with_memory})
+        
+        result = await query_cypher({"query": question_with_memory}, criteria)
 
         # Save AI response to memory
         memory.chat_memory.add_ai_message(str(result))

@@ -94,8 +94,18 @@ graph_chain = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
-async def query_cypher(query, chat_history="", extracted_ingredients=None):
-    if extracted_ingredients:
-        ingredient_text = ", ".join(extracted_ingredients)
-        query += f" Please make sure the cypher query checks for these ingredients: {ingredient_text}."
+async def query_cypher(query, chat_history="", criteria=None):
+    if criteria:
+        if(criteria['category']):
+            category_text = ", ".join(criteria['category'])
+            query += f"Please make sure the cypher query includes '(r)-[:BELONGS_TO]->(t:Category)' for only the category: {category_text}.\n"
+            
+        if(criteria['cuisine']):
+            cuisine_text = ", ".join(criteria['cuisine'])
+            query += f"Please make sure the cypher query includes '(r:)-[:HAS_CUISINE]->(c:Cuisine)' with only the cuisine: {cuisine_text}. \n"
+            
+        if(criteria['ingredients']): 
+            ingredient_text = ", ".join(criteria['ingredients'])
+            query += f"Please make sure the cypher query has 'toLower(r.ingredients) CONTAINS' for only these ingredients: {ingredient_text}."
+
     return graph_chain.invoke({"query": query})
