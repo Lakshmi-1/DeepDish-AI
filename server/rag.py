@@ -1,4 +1,4 @@
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain.chains import GraphCypherQAChain
 from langchain_core.prompts.prompt import PromptTemplate
 from langchain.graphs import Neo4jGraph
@@ -86,7 +86,7 @@ Context: {context}
 )
 
 graph_chain = GraphCypherQAChain.from_llm(
-    ChatGroq(model="llama-3.1-8b-instant", temperature=0),
+    ChatOpenAI(model="gpt-4o-mini", temperature=0),
     graph=graph,
     qa_prompt=CYPHER_QA_PROMPT,
     cypher_prompt=CYPHER_GENERATION_PROMPT,
