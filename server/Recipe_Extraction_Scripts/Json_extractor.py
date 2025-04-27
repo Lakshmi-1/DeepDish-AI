@@ -1,6 +1,6 @@
 import os
 import json
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_community.document_loaders import JSONLoader
@@ -9,8 +9,8 @@ from neo4j import GraphDatabase
 
 load_dotenv()
 
-llm = ChatGroq(
-    model="llama-3.1-8b-instant",
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
     temperature=0
 )
 
