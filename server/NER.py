@@ -65,11 +65,8 @@ def build_patterns():
     ruler.add_patterns(patterns)
     return nlp
 
-
-def extract_recipe_criteria(doc):
-    cuisine = []
 def extract_recipe_criteria(doc, allergies):
-    cuisine = None
+    cuisine = []
     ingredients = []
     category = []
     m = inflect.engine()
@@ -79,10 +76,9 @@ def extract_recipe_criteria(doc, allergies):
         if ent.label_ == "CUISINE":
             cuisine.append(ent.text.capitalize())
         elif ent.label_ == "INGREDIENT":
-            ingredients.append(ent.lemma_)
-            ingredients.append(m.plural(ent.lemma_))
-        elif ent.label_ == "DIET_LABEL":
-            diet = ent.text.capitalize()
+            if ent.label_ not in allergies and m.plural(ent.lemma_) not in allergies:
+                ingredients.append(ent.lemma_)
+                ingredients.append(m.plural(ent.lemma_))
         elif ent.label_ == "CATEGORY":
             category.append(ent.lemma_)
             category.append(m.plural(ent.lemma_))

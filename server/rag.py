@@ -89,8 +89,8 @@ CYPHER_QA_PROMPT = PromptTemplate(
     template="""
 You are tasked with forming nice and human understandable answers. 
 Format whatever data you are given in the context in a human-readable way. Do not let the user know about the fact that you are referring to a provided context.
-If the user provides a list of allergies, warn the user when they are trying to look for recipes with those ingredients.
 If you disclude recipes due to allergies, mention that to the user.
+Only disclude ingredients if they are an allergy.
 Just provide a direct answer without any additional text unless you have to explain something regarding the allergies they specified.
 If the context is empty, try your best to answer the user's question.
 Refer to the user in the second person.
