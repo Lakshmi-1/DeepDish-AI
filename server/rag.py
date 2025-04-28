@@ -1,12 +1,18 @@
 from langchain_openai import ChatOpenAI
 from langchain.chains import GraphCypherQAChain
 from langchain_core.prompts.prompt import PromptTemplate
-from langchain.graphs import Neo4jGraph
+from langchain_community.graphs import Neo4jGraph
 from dotenv import load_dotenv
 
 import os
+import getpass
 
 load_dotenv()
+
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if openai_api_key is None:
+    openai_api_key = getpass.getpass("Please enter your OpenAI API key: ")
+    os.environ["OPENAI_API_KEY"] = openai_api_key
 
 # Initialize Neo4j connection
 graph = Neo4jGraph(
