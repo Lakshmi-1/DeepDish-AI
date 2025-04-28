@@ -59,7 +59,8 @@ function App() {
           .split(',')
           .map(item => item.trim())
           .filter(item => item.length > 0),
-          city: city
+          city: city,
+          name: namePopupInput
           }),
         });
 
