@@ -9,49 +9,45 @@ load_dotenv()
 
 # Initialize Neo4j connection
 graph = Neo4jGraph(
-    os.getenv('NEO4J_URI'),
-    os.getenv('NEO4J_USERNAME'),
-    os.getenv('NEO4J_PASSWORD')
+    "neo4j+s://00008022.databases.neo4j.io",
+    "neo4j",
+    "162KYtL3kzcf5qklj2nVb9f6L4z0xBOAUz8YIckZYpw"
 )
 
 # Define Cypher Generation and QA Prompts using dynamic schema
 CYPHER_GENERATION_TEMPLATE = """
 Role:
-You are an expert Neo4j Developer generating Cypher queries based on the provided schema. Assume the user wants a real answer unless the question is clearly just "hello" or "hi". Do NOT define custom functions. Do NOT filter out real queries.
+You are an expert Neo4j Developer generating Cypher queries based on the provided schema and given input dictionary. Assume the user wants a real answer unless the question is clearly just "hello" or "hi". Do NOT define custom functions. Do NOT filter out real queries.
 
 
 Guidelines:
-Keep Restaurants and Recipes Separate
-
-Never query them together since they are disjoint entities.
-
 Use Only Explicit Relationships & Constraints
 
 Do not add extra relationships unless the question explicitly requires them.
 
-Use the Category node to classify the recipe type. Example: "dessert" or "appetizer" or "smoothie".
-
-Always query Category when filtering recipe types (e.g., desserts, appetizers).
-
-Default to Recipes for General Questions
-
 If the user asks about food without specifying, assume they mean recipes.
-
-Check Singular & Plural Forms for Node Properties
-
-Example: If checking for "dessert", also check for "desserts".
 
 Ensure Case Insensitivity for All Node Properties
 
-Use toLower() or case-insensitive regex ((?i)) to match property values.
+Use toLower() to match property values.
 
-Handle and spelling or grammar errors in the user query before processing. All stopword removal has be done for u
+Handle and spelling or grammar errors in the user query before processing.
+
+Properly account for all of the user's allergies in the cypher query.
+
+Always MATCH the ingredients of a recipe and use WHERE NOT toLower(i.name) IN [...] for any allergies the user provides you. 
+
+Do not use WHERE toLower(i.name) NOT IN [...].
+
+Some input keys can be empty.
+
 
 Example:
 MATCH (r:Recipe)-[:BELONGS_TO]->(c:Category),
     (r)-[:CONTAINS]->(i:Ingredient)
-WHERE toLower(c.value) IN ["dessert", "desserts"]
-AND toLower(i.name) IN ["strawberry", "strawberries"]
+WHERE toLower(c.value) IN ["dessert"]
+AND toLower(i.name) IN ["strawberry"]
+AND NOT toLower(i.name) IN ["avocado"]
 RETURN r.name AS RecipeName;
 
 Schema:
@@ -66,19 +62,16 @@ CYPHER_GENERATION_PROMPT = PromptTemplate(
     template=CYPHER_GENERATION_TEMPLATE
 )
 
-CYPHER_QA_TEMPLATE = """You are an assistant that helps to form nice and human understandable answers. Generate your answer to the question only from the context provided unless the context is empty.
-You do not need to refer to the context when the user is exchanging pleasantries. Make sure all other responses are one from the given context no matter the user's question.
-Context: {context}
-Question: {question}
-"""
-
 CYPHER_QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template="""
-You are an assistant that helps to form nice and human understandable answers.
-Generate your answer to the question only from the context provided unless the context is empty.
-You do not need to refer to the context when the user is exchanging pleasantries.
-Make sure all other responses are one from the given context no matter the user's question.
+You are tasked with forming nice and human understandable answers. 
+Format whatever data you are given in the context in a human-readable way. Do not let the user know about the fact that you are referring to a provided context.
+If the user provides a list of allergies, warn the user when they are trying to look for recipes with those ingredients.
+If you disclude recipes due to allergies, mention that to the user.
+Just provide a direct answer without any additional text unless you have to explain something regarding the allergies they specified.
+If the context is empty, try your best to answer the user's question.
+Refer to the user in the second person.
 
 Question: {question}
 Context: {context}
@@ -94,18 +87,6 @@ graph_chain = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
-async def query_cypher(query, chat_history="", criteria=None):
-    if criteria:
-        if(criteria['category']):
-            category_text = ", ".join(criteria['category'])
-            query += f"Please make sure the cypher query includes '(r)-[:BELONGS_TO]->(t:Category)' for only the category: {category_text}.\n"
-            
-        if(criteria['cuisine']):
-            cuisine_text = ", ".join(criteria['cuisine'])
-            query += f"Please make sure the cypher query includes '(r:)-[:HAS_CUISINE]->(c:Cuisine)' with only the cuisine: {cuisine_text}. \n"
-            
-        if(criteria['ingredients']): 
-            ingredient_text = ", ".join(criteria['ingredients'])
-            query += f"Please make sure the cypher query has 'toLower(r.ingredients) CONTAINS' for only these ingredients: {ingredient_text}."
-
+async def query_cypher(query, criteria=None):
+    query += str(criteria)
     return graph_chain.invoke({"query": query})
