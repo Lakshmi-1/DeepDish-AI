@@ -1,10 +1,11 @@
 from langchain_openai import ChatOpenAI
 from langchain.chains import GraphCypherQAChain
 from langchain_core.prompts.prompt import PromptTemplate
-from langchain.graphs import Neo4jGraph
+from langchain_community.graphs import Neo4jGraph
 from dotenv import load_dotenv
 import getpass
 import os
+import getpass
 
 load_dotenv()
 
