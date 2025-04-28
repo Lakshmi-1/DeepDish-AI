@@ -88,8 +88,10 @@ graph_chain = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
-async def query_cypher(query, criteria=None, city=None):
+async def query_cypher(query, criteria=None, city=None, name=None):
     query += str(criteria)
+    if name:
+        query = f"Address the user by their name, {name}, when answering.\n" + query
     if city:
         query += f"\nRestrict restaurant queries to the city: {city}."
     return graph_chain.invoke({"query": query})
