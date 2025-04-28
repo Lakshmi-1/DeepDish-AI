@@ -4,7 +4,6 @@ from rag import query_cypher
 from langchain.memory import ConversationBufferMemory
 from NER import build_patterns, extract_recipe_criteria
 from basicChatStructure import intent_parser, get_last_k_messages
-import asyncio
 
 app = Flask(__name__)
 cors = CORS(app, origins='*')
