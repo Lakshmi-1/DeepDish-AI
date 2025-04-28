@@ -3,6 +3,7 @@ from langchain.chains import GraphCypherQAChain
 from langchain_core.prompts.prompt import PromptTemplate
 from langchain.graphs import Neo4jGraph
 from dotenv import load_dotenv
+
 import os
 
 load_dotenv()
@@ -87,6 +88,8 @@ graph_chain = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
-async def query_cypher(query, criteria=None):
+async def query_cypher(query, criteria=None, city=None):
     query += str(criteria)
+    if city:
+        query += f"\nRestrict restaurant queries to the city: {city}."
     return graph_chain.invoke({"query": query})

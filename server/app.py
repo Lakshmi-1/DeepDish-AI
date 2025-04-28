@@ -31,6 +31,7 @@ def reset_memory():
 async def query():
     user_query = request.json.get('query', '')
     allergies = request.json.get('allergies', '')
+    city = request.json.get('city', '')
     user_id = request.remote_addr
 
     if not user_query:
@@ -82,7 +83,7 @@ async def query():
             chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
             question_with_memory = chat_history_str + f"\nUser: {criteria}"
 
-            result = await query_cypher(question_with_memory, criteria)
+            result = await query_cypher(question_with_memory, criteria, city=city)
 
             # Save AI response to memory
             memory.chat_memory.add_ai_message(str(result))
