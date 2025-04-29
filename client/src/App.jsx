@@ -32,12 +32,13 @@ function App() {
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState(false);
   const [city, setCity] = useState('');
-
-
-
+  const [fullBotResponse, setFullBotResponse] = useState('');
+  const [visibleBotResponse, setVisibleBotResponse] = useState('');
 
   const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
+  const popupRef = useRef();
+  const textareaRef = useRef();
+  const textareaRefBottom = useRef();
 
   const handleQueryChange = (e) => setQuery(e.target.value);
 
@@ -62,19 +63,20 @@ function App() {
           city: city,
           name: namePopupInput
           }),
-        });
+      });
 
       const data = await response.json();
       if (data.result) {
-        setMessages((prev) => [...prev, { sender: 'bot', text: data.result.result }]);
+        const fullText = data.result.result;
+        setFullBotResponse(fullText);
+        setVisibleBotResponse('');
+        revealBotResponse(fullText);
       } else {
         setMessages((prev) => [...prev, { sender: 'bot', text: 'No results found.' }]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setMessages((prev) => [...prev, { sender: 'bot', text: 'An error occurred while fetching data.' }]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -82,22 +84,28 @@ function App() {
     e.preventDefault();
     if (loading) return;
     fetchQueryResult();
+    resetTextareaHeight();
+  };
+
+  const resetTextareaHeight = () => {
+    textareaRefBottom.current.style.height = 'auto';
+    textareaRefBottom.current.style.height = `${textareaRef.current.scrollHeight}px`;
+  };
+
+  const handleTextareaInput = () => {
+    textareaRef.current.style.height = 'auto';  
+    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`;
+  };
+
+  const handleTextareaInputBottom = () => {
+    textareaRefBottom.current.style.height = 'auto';
+    textareaRefBottom.current.style.height = `${Math.min(textareaRefBottom.current.scrollHeight, 150)}px`;
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const adjustTextareaHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  };
-
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [query]);
   useEffect(() => {
     const stopWatching = getLocation();
     return () => {
@@ -105,138 +113,150 @@ function App() {
     };
   }, []);
 
-
-
   const getMessageClass = (text) => {
     const lines = text.split('\n').length;
     const t = Math.floor(text.length / 30);
     return lines > 1 || t > 1 ? 'rounded-lg' : 'rounded-full';
   };
 
-const getLocation = () => {
-  setLocation(null);
-  setLocationError(false);
-  if (navigator.geolocation) {
-    const watchId = navigator.geolocation.watchPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        setLocation({ latitude: lat, longitude: lon });
-        setLocationError(false);
-
-        // Fetch city name
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-          const data = await response.json();
-          if (data.address) {
-            const cityName = data.address.city || data.address.town || data.address.village || data.address.state;
-            setCity(cityName);
-          }
-        } catch (error) {
-          console.error('Error fetching city name:', error);
-        }
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        setLocationError(true);
+  const revealBotResponse = (text) => {
+    const words = text.split(' ');
+    let index = 0;
+  
+    const reveal = () => {
+      const chunkSize = Math.floor(Math.random() * 4) + 1; // Reveal 1-4 words
+      const nextChunk = words.slice(index, index + chunkSize).join(' ');
+      setVisibleBotResponse(prev => prev ? `${prev} ${nextChunk}` : nextChunk);
+      index += chunkSize;
+  
+      if (index >= words.length) {
+        clearInterval(timer);
+        setMessages(prev => [...prev, { sender: 'bot', text }]);
+        setVisibleBotResponse('');
+        setLoading(false);
       }
-    );
+    };
+  
+    const timer = setInterval(reveal, 200);
+  };
 
-    // Cleanup watcher if needed
-    return () => navigator.geolocation.clearWatch(watchId);
-  } else {
-    console.error('Geolocation not supported');
-    setLocationError(true);
-  }
-};
+  const getLocation = () => {
+    setLocation(null);
+    setLocationError(false);
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setLocation({ latitude: lat, longitude: lon });
+          setLocationError(false);
 
-
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await response.json();
+            if (data.address) {
+              const cityName = data.address.city || data.address.town || data.address.village || data.address.state;
+              setCity(cityName);
+            }
+          } catch (error) {
+            console.error('Error fetching city name:', error);
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setLocationError(true);
+        }
+      );
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      console.error('Geolocation not supported');
+      setLocationError(true);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen relative">
-
       <div
         className="fixed top-0 left-0 w-full opacity-5 h-full bg-cover bg-center z-0"
         style={{ backgroundImage: `url(${background})` }}
       ></div>
 
-
       <div className="fixed flex items-center justify-between w-full p-4 text-3xl font-bold bg-green text-black rounded-b-md z-50">
         <div className="flex items-center">
-            <img src={pizzaIcon} className="w-[30px] h-[30px] ml-2 mr-5" />
-            DeepDish AI
+          <img src={pizzaIcon} className="w-[30px] h-[30px] ml-2 mr-5" />
+          DeepDish AI
         </div>
-            <button
-                onClick={() => setShowPopup(true)}
-                className="flex items-center justify-center w-[40px] h-[40px] mr-2 bg-white rounded-full shadow-md hover:bg-gray-200"
-            >
-                <img src={personIcon} className="w-[25px] h-[25px]" alt="Profile" />
-            </button>
+        <button
+          onClick={() => setShowPopup(true)}
+          className="flex items-center justify-center w-[40px] h-[40px] mr-2 bg-white rounded-full shadow-md hover:bg-gray-200"
+        >
+          <img src={personIcon} className="w-[25px] h-[25px]" alt="Profile" />
+        </button>
       </div>
 
       {showPopup && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-50 backdrop-blur">
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-                <h2 className="text-2xl font-bold mb-4">Profile</h2>
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-white/70 z-70 backdrop-blur">
+          <div ref={popupRef} className="relative bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <button
+              onClick={() => setShowPopup(false)}
+              className="absolute top-2 left-4 font-bold text-gray-500 hover:text-black"
+            >
+              ✕
+            </button>
 
-               <p className= "text-black mb-4">Personalize Name: </p>
-                <input
-                    type="text"
-                    value={namePopupInput}
-                    onChange={(e) => setNamePopupInput(e.target.value)}
-                    placeholder="Enter something..."
-                    className="w-full p-2 border rounded mb-4"
-                />
+            <h2 className="text-2xl font-bold mb-4 text-center">Profile</h2>
 
+            <p className="text-black mb-2">Personalize Name:</p>
+            <input
+              type="text"
+              value={namePopupInput}
+              onChange={(e) => setNamePopupInput(e.target.value)}
+              placeholder="Enter something..."
+              className="w-full p-2 border rounded mb-4"
+            />
 
-                <p className= "text-black mb-4">Enter Allergies - Please separate by comma: </p>
-                <input
-                    type="text"
-                    value={allergiesPopupInput}
-                    onChange={(e) => setAllergiesPopupInput(e.target.value)}
-                    placeholder="Enter something..."
-                    className="w-full p-2 border rounded mb-4"
-                />
+            <p className="text-black mb-2">Enter Allergies - Please separate by comma:</p>
+            <input
+              type="text"
+              value={allergiesPopupInput}
+              onChange={(e) => setAllergiesPopupInput(e.target.value)}
+              placeholder="Enter something..."
+              className="w-full p-2 border rounded mb-4"
+            />
 
-                <div className="text-sm text-black ml-5">
-                  {location ? (
-                    <div className="flex items-center space-x-2">
-                      <span>📍</span>
-                      {city ? (
-                        <span>{city}</span>
-                      ) : (
-                        <span>Lat: {location.latitude.toFixed(2)}, Lon: {location.longitude.toFixed(2)}</span>
-                      )}
-                    </div>
-                  ) : locationError ? (
-                    <button
-                      onClick={getLocation}
-                      className="px-2 py-1 bg-white text-green-700 rounded shadow hover:bg-gray-200 text-xs"
-                    >
-                      Enable Location
-                    </button>
+            <div className="text-sm text-black ml-1 mb-4">
+              {location ? (
+                <div className="flex items-center space-x-2">
+                  <span>📍</span>
+                  {city ? (
+                    <span>{city}</span>
                   ) : (
-                    <p>Loading location...</p>
+                    <span>Lat: {location.latitude.toFixed(2)}, Lon: {location.longitude.toFixed(2)}</span>
                   )}
                 </div>
-
-
-
-
+              ) : locationError ? (
                 <button
-                    onClick={() => setShowPopup(false)}
-                    className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                  onClick={getLocation}
+                  className="px-2 py-1 bg-white text-black rounded shadow hover:bg-gray-200 text-xs"
                 >
-                    Close
+                  Enable Location
                 </button>
+              ) : (
+                <p>Loading location...</p>
+              )}
             </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowPopup(false)}
+                className="px-4 py-2 bg-purple text-white rounded hover:opacity-90"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-
-
-
- 
       <div className="flex-1 overflow-auto pt-[80px] pb-[120px] relative flex justify-center z-10">
         <div className="w-full max-w-3xl px-4 space-y-4">
           {messages.map((msg, index) => (
@@ -248,11 +268,20 @@ const getLocation = () => {
               </p>
             </div>
           ))}
-          {loading && (
+          {loading && !visibleBotResponse && (
             <div className="flex justify-start">
-              <span className="animate-bounce mx-1 text-2xl">.</span>
-              <span className="animate-bounce mx-1 text-2xl delay-100">.</span>
-              <span className="animate-bounce mx-1 text-2xl delay-200">.</span>
+              <p className="px-4 py-2 bg-gray-300 text-black rounded-lg break-words whitespace-pre-wrap max-w-[500px] transition-all duration-300 animate-pulse">
+                Thinking...
+              </p>
+            </div>
+          )}
+
+          {visibleBotResponse && (
+            <div className="flex justify-start">
+              <p className="px-4 py-2 bg-gray-300 text-black rounded-lg break-words whitespace-pre-wrap max-w-[500px] transition-all duration-300">
+                {visibleBotResponse}
+                <span className="inline-block w-[10px] h-[1em] bg-black ml-1 animate-blink align-middle"></span>
+              </p>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -267,7 +296,7 @@ const getLocation = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.5 }}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-50 backdrop-blur"
+            className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-70 backdrop-blur"
           >
             <img src={pizzaIcon} className="w-[100px] h-[100px] mb-4" />
             <h1 className="text-4xl font-bold mb-4 text-black">Welcome to DeepDish AI!</h1>
@@ -279,6 +308,7 @@ const getLocation = () => {
                     ref={textareaRef}
                     value={query}
                     onChange={handleQueryChange}
+                    onInput={handleTextareaInput}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -315,19 +345,20 @@ const getLocation = () => {
             <div className="w-full max-w-3xl flex gap-2">
               <div className="flex-1 outline bg-gray-200 rounded-lg p-2 flex">
                 <textarea
-                  ref={textareaRef}
-                  value={query}
-                  onChange={handleQueryChange}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit(e);
-                    }
-                  }}
-                  className="w-full p-2 bg-transparent focus:outline-none resize-none"
-                  placeholder="Type your message..."
-                  rows="1"
-                />
+                    ref={textareaRefBottom}
+                    value={query}
+                    onChange={handleQueryChange}
+                    onInput={handleTextareaInputBottom}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e);
+                      }
+                    }}
+                    className="w-full p-2 bg-transparent focus:outline-none resize-none"
+                    placeholder="Type your message..."
+                    rows="1"
+                  />
               </div>
               <div className="flex items-end">
                 <button
