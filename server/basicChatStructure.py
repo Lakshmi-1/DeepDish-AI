@@ -11,9 +11,7 @@ import json
 client = OpenAI()
 
 def get_last_k_messages(memory, k = 5):
-    # Get the underlying messages
     messages = memory.chat_memory.messages
-    # Safely slice the last k (or fewer) messages
     return messages[-k:] if k <= len(messages) else messages
 
 
@@ -82,7 +80,7 @@ class intent_parser(object):
   def respond_to_food_question(self, user_input):
     system_instruction = """You are a friendly assistant that can help users answer food related questions. 
     Please refer to the current user question and previous input to answer as accurately as possible. 
-    Only respond to the most recent user question and use previous input as context"""
+    PLease only respond to the most recent user question and use previous input as context -- do not respond to previous input"""
     food_question_response = ask_openai(user_input, system_instruction)
     return food_question_response
     
@@ -99,6 +97,15 @@ class intent_parser(object):
     other_response = ask_openai(user_input, system_instruction)
 
     return other_response
+  def find_relevant_information(self, current_query, memory):
+    system_instruction = """You are an information synthesis expert. I am going to give you a conversation and a current user question.
+    Please take the conversation and extract only the relevant details to the current user question. Return your response as {'relevant context': ...}
+    Do not restate the users current or previous questions simply extract the relevant information to their current question"""
+    user_input = f"""previous conversation: {memory}
+    current question: {current_query}"""
+    find_info = ask_openai(user_input, system_instruction)
+
+    return find_info
      
 
 class backup_IR(object):

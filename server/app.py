@@ -49,20 +49,75 @@ async def query():
         temp = conservational_intent_parser.respond_to_gratitude(user_query) 
         return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'ask a question':
-        #print('entering question pipeline')
+        print('entering question pipeline')
         memory_pass = str(get_last_k_messages(memory))
         temp = conservational_intent_parser.respond_to_question(memory_pass)
         if temp.strip().lower() == 'non food related question':
-            #print('entering non food related')
+            print('entering non food related')
             temp = conservational_intent_parser.respond_to_NonFood_question(user_query) 
             return jsonify({"result": {"result": temp}})
         elif temp.strip().lower() == 'food related question':
-            #print('entering food related')
-            temp = conservational_intent_parser.respond_to_food_question(memory_pass) 
+            print('entering food related')
+            relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
+            new_user_query = f"""relevant context from previous conversation:{relevant_context}
+user_question:{user_query}
+"""
+            temp = conservational_intent_parser.respond_to_food_question(new_user_query) 
             return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'other':
         temp = conservational_intent_parser.respond_to_other(user_query)
         return jsonify({"result": {"result": temp}})
+    elif global_intent.strip().lower() == 'find a recipe':
+        try:
+            # Get lemmatized ingredients using NER
+            doc = nlp(user_query)
+            criteria = extract_recipe_criteria(doc)
+            ingredients = criteria.get("ingredients", [])
+
+            # Await the async query_cypher function
+            #chat_history_msgs = memory.load_memory_variables({})["chat_history"]
+            #chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
+            #question_with_memory = chat_history_str + f"\nUser: {user_query}"
+            memory_pass = str(get_last_k_messages(memory))
+            relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
+            new_user_query = f"""relevant context from previous conversation:{relevant_context}
+user_question:{user_query}"""
+
+            result = await query_cypher(new_user_query, 'find a recipe', ingredients)
+
+            # Save AI response to memory
+            memory.chat_memory.add_ai_message(str(result))
+
+            return jsonify({"result": result})
+        except Exception as e:
+            app.logger.error(f"Error: {e}")
+            return jsonify({"error": str(e)}), 500
+        
+    elif global_intent.strip().lower() == 'find a restaurant':
+        try:
+            # Get lemmatized ingredients using NER
+            doc = nlp(user_query)
+            criteria = extract_recipe_criteria(doc)
+            ingredients = criteria.get("ingredients", [])
+
+            # Await the async query_cypher function
+            #chat_history_msgs = memory.load_memory_variables({})["chat_history"]
+            #chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
+            #question_with_memory = chat_history_str + f"\nUser: {user_query}"
+            memory_pass = str(get_last_k_messages(memory))
+            relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
+            new_user_query = f"""relevant context from previous conversation:{relevant_context}
+user_question:{user_query}"""
+
+            result = await query_cypher(new_user_query, 'find a restaurant' , ingredients)
+
+            # Save AI response to memory
+            memory.chat_memory.add_ai_message(str(result))
+
+            return jsonify({"result": result})
+        except Exception as e:
+            app.logger.error(f"Error: {e}")
+            return jsonify({"error": str(e)}), 500
         
     else:
         try:

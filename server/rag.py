@@ -61,9 +61,85 @@ User Question:
 {question}
 """
 
+CYPHER_GENERATION_TEMPLATE_RECIPE = """
+Role:
+You are an expert Neo4j Developer generating recipe Cypher queries based on the provided schema.
+
+Guidelines:
+
+Use Only Explicit Relationships & Constraints
+
+Do not add extra relationships unless the question explicitly requires them.
+
+Use the Category node to classify the recipe type. Example: "dessert" or "appetizer" or "smoothie".
+
+Always query Category when filtering recipe types (e.g., desserts, appetizers).
+
+Check Singular & Plural Forms for Node Properties
+
+Example: If checking for "dessert", also check for "desserts".
+
+Ensure Case Insensitivity for All Node Properties
+
+Use toLower() or case-insensitive regex ((?i)) to match property values.
+
+Handle and spelling or grammar errors in the user query before processing. All stopword removal has be done for you
+
+Example:
+MATCH (r:Recipe)-[:BELONGS_TO]->(c:Category),
+    (r)-[:CONTAINS]->(i:Ingredient)
+WHERE toLower(c.value) IN ["dessert", "desserts"]
+AND toLower(i.name) IN ["strawberry", "strawberries"]
+RETURN r.name AS RecipeName;
+
+Schema:
+{schema}
+
+User Question:
+{question}
+"""
+
+CYPHER_GENERATION_TEMPLATE_RESTURANTS = """
+Role:
+You are an expert Neo4j Developer generating resturant Cypher queries based on the provided schema.
+
+Guidelines:
+
+Use Only Explicit Relationships & Constraints
+
+Do not add extra relationships unless the question explicitly requires them.
+
+Check Singular & Plural Forms for Node Properties
+
+Ensure Case Insensitivity for All Node Properties
+
+Use toLower() or case-insensitive regex ((?i)) to match property values.
+
+Handle and spelling or grammar errors in the user query before processing. All stopword removal has be done for you
+
+Example:
+MATCH (n:Restaurant)-[:HAS_TYPE]->(t:Type), (n)-[:HAS_RATING]->(r:Rating)
+WHERE toLower(t.type) in ['donuts']
+RETURN n.name AS RestaurantName
+
+Schema:
+{schema}
+
+User Question:
+{question}
+"""
+
 CYPHER_GENERATION_PROMPT = PromptTemplate(
     input_variables=["schema", "question"],
     template=CYPHER_GENERATION_TEMPLATE
+)
+CYPHER_GENERATION_PROMPT_RECIPE = PromptTemplate(
+    input_variables=["schema", "question"],
+    template=CYPHER_GENERATION_TEMPLATE_RECIPE
+)
+CYPHER_GENERATION_PROMPT_RESTURANTS = PromptTemplate(
+    input_variables=["schema", "question"],
+    template=CYPHER_GENERATION_TEMPLATE_RESTURANTS
 )
 
 CYPHER_QA_TEMPLATE = """You are an assistant that helps to form nice and human understandable answers. Generate your answer to the question only from the context provided unless the context is empty.
@@ -94,8 +170,32 @@ graph_chain = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
-async def query_cypher(query, chat_history="", extracted_ingredients=None):
+graph_chain_recipe = GraphCypherQAChain.from_llm(
+    ChatOpenAI(model="gpt-4o-mini", temperature=0),
+    graph=graph,
+    qa_prompt=CYPHER_QA_PROMPT,
+    cypher_prompt=CYPHER_GENERATION_PROMPT_RECIPE,
+    verbose=True,
+    allow_dangerous_requests=True
+)
+
+graph_chain_resturants = GraphCypherQAChain.from_llm(
+    ChatOpenAI(model="gpt-4o-mini", temperature=0),
+    graph=graph,
+    qa_prompt=CYPHER_QA_PROMPT,
+    cypher_prompt=CYPHER_GENERATION_PROMPT_RESTURANTS,
+    verbose=True,
+    allow_dangerous_requests=True
+)
+
+async def query_cypher(query, intent, extracted_ingredients=None):
     if extracted_ingredients:
         ingredient_text = ", ".join(extracted_ingredients)
         query += f" Please make sure the cypher query checks for these ingredients: {ingredient_text}."
-    return graph_chain.invoke({"query": query})
+    if intent == 'find a recipe':
+        return graph_chain_recipe.invoke({"query": query})
+    elif intent == 'find a restaurant':
+        return graph_chain_resturants.invoke({"query": query})
+    else:
+        return graph_chain.invoke({"query": query})
+    
