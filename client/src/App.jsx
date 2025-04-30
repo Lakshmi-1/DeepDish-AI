@@ -428,20 +428,20 @@ function App() {
             <div className="w-full max-w-3xl flex gap-2">
               <div className="flex-1 outline bg-gray-200 rounded-lg p-2 flex">
                 <textarea
-                  ref={textareaRefBottom}
-                  value={query}
-                  onChange={handleQueryChange}
-                  onInput={handleTextareaInputBottom}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit(e);
-                    }
-                  }}
-                  className="w-full p-2 bg-transparent focus:outline-none resize-none"
-                  placeholder="Type your message..."
-                  rows="1"
-                />
+                    ref={textareaRefBottom}
+                    value={query}
+                    onChange={handleQueryChange}
+                    onInput={handleTextareaInputBottom}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e);
+                      }
+                    }}
+                    className="w-full p-2 bg-transparent focus:outline-none resize-none"
+                    placeholder="Type your message..."
+                    rows="1"
+                  />
               </div>
               <div className="flex items-end">
                 <button
