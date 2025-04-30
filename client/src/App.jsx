@@ -7,21 +7,6 @@ import { faArrowUp, faSquare } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
-  useEffect(() => {
-    const resetMemory = async () => {
-      try {
-        await fetch('http://127.0.0.1:8080/reset_memory', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (error) {
-        console.error('Error resetting memory:', error);
-      }
-    };
-
-    resetMemory();
-  }, []);
-
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -30,7 +15,7 @@ function App() {
   const [namePopupInput, setNamePopupInput] = useState('');
   const [allergiesPopupInput, setAllergiesPopupInput] = useState('');
   const [location, setLocation] = useState(null);
-  const [locationError, setLocationError] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [city, setCity] = useState('');
   const [fullBotResponse, setFullBotResponse] = useState('');
   const [visibleBotResponse, setVisibleBotResponse] = useState('');
@@ -40,6 +25,82 @@ function App() {
   const popupRef = useRef();
   const textareaRef = useRef();
   const textareaRefBottom = useRef();
+
+  useEffect(() => {
+    getLocation();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        setShowPopup(false);
+      }
+    };
+
+    if (showPopup) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPopup]);
+
+  useEffect(() => {
+    const handleClick = () => {
+      if (initial) setInitial(false);
+    };
+
+    if (initial) {
+      document.addEventListener('mousedown', handleClick);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [initial]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      setLocationLoading(true);
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setLocation({ latitude: lat, longitude: lon });
+
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await response.json();
+            if (data.address) {
+              const cityName = data.address.city || data.address.town || data.address.village || data.address.state;
+              setCity(cityName);
+            }
+          } catch (error) {
+            console.error('Error fetching city name:', error);
+          } finally {
+            setLocationLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setLocationLoading(false);
+        }
+      );
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      console.error('Geolocation not supported');
+    }
+  };
+
+  const disableLocation = () => {
+    setLocation(null);
+    setCity('');
+  };
 
   const handleQueryChange = (e) => setQuery(e.target.value);
 
@@ -56,14 +117,14 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-           query,
-           allergies: allergiesPopupInput
-          .split(',')
-          .map(item => item.trim())
-          .filter(item => item.length > 0),
+          query,
+          allergies: allergiesPopupInput
+            .split(',')
+            .map(item => item.trim())
+            .filter(item => item.length > 0),
           city: city,
           name: namePopupInput
-          }),
+        }),
       });
 
       const data = await response.json();
@@ -74,10 +135,12 @@ function App() {
         revealBotResponse(fullText);
       } else {
         setMessages((prev) => [...prev, { sender: 'bot', text: 'No results found.' }]);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setMessages((prev) => [...prev, { sender: 'bot', text: 'An error occurred while fetching data.' }]);
+      setLoading(false);
     }
   };
 
@@ -94,7 +157,7 @@ function App() {
   };
 
   const handleTextareaInput = () => {
-    textareaRef.current.style.height = 'auto';  
+    textareaRef.current.style.height = 'auto';
     textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`;
   };
 
@@ -136,13 +199,13 @@ function App() {
   const revealBotResponse = (text) => {
     const words = text.split(' ');
     let index = 0;
-  
+
     const reveal = () => {
-      const chunkSize = Math.floor(Math.random() * 4) + 1; // Reveal 1-4 words
+      const chunkSize = Math.floor(Math.random() * 4) + 1;
       const nextChunk = words.slice(index, index + chunkSize).join(' ');
       setVisibleBotResponse(prev => prev ? `${prev} ${nextChunk}` : nextChunk);
       index += chunkSize;
-  
+
       if (index >= words.length) {
         clearInterval(timer);
         setMessages(prev => [...prev, { sender: 'bot', text }]);
@@ -150,7 +213,7 @@ function App() {
         setLoading(false);
       }
     };
-  
+
     const timer = setInterval(reveal, 200);
   };
 
@@ -315,7 +378,6 @@ function App() {
               </p>
             </div>
           )}
-
           {visibleBotResponse && (
             <div className="flex justify-start">
               <p className="px-4 py-2 bg-gray-300 text-black rounded-lg break-words whitespace-pre-wrap max-w-[500px] transition-all duration-300">
@@ -341,7 +403,7 @@ function App() {
             <img src={pizzaIcon} className="w-[100px] h-[100px] mb-4" />
             <h1 className="text-4xl font-bold mb-4 text-black">Welcome to DeepDish AI!</h1>
             <h2 className="text-2xl font-semibold mb-4 text-black">How can I help you?</h2>
-            <form onSubmit={handleSubmit} className="w-full max-w-xl px-4">
+            <form id="chatbotMssg" onSubmit={handleSubmit} className="w-full max-w-xl px-4">
               <div className="flex gap-2">
                 <div className="flex-1 bg-gray-200 rounded-lg p-2 flex">
                   <textarea
@@ -379,26 +441,27 @@ function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             transition={{ duration: 0.5 }}
+            id="chatbotMssg"
             onSubmit={handleSubmit}
             className="fixed bottom-0 w-full flex items-center bg-white justify-center px-4 pb-4 z-50"
           >
             <div className="w-full max-w-3xl flex gap-2">
               <div className="flex-1 outline bg-gray-200 rounded-lg p-2 flex">
                 <textarea
-                    ref={textareaRefBottom}
-                    value={query}
-                    onChange={handleQueryChange}
-                    onInput={handleTextareaInputBottom}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSubmit(e);
-                      }
-                    }}
-                    className="w-full p-2 bg-transparent focus:outline-none resize-none"
-                    placeholder="Type your message..."
-                    rows="1"
-                  />
+                  ref={textareaRefBottom}
+                  value={query}
+                  onChange={handleQueryChange}
+                  onInput={handleTextareaInputBottom}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  className="w-full p-2 bg-transparent focus:outline-none resize-none"
+                  placeholder="Type your message..."
+                  rows="1"
+                />
               </div>
               <div className="flex items-end">
                 <button
