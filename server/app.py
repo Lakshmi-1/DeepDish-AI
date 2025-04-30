@@ -12,19 +12,8 @@ cors = CORS(app, origins='*')
 user_memory = {}
 nlp = build_patterns() #create patterns for NER
 
-@app.route("/api/test", methods=['GET'])
-def test():
-    return jsonify({"message": "Hello, from Flask!"})
-
 #decalres intent parser object 
 conservational_intent_parser = intent_parser()
-
-@app.route('/reset_memory', methods=['POST'])
-def reset_memory():
-    user_id = request.remote_addr
-    if user_id in user_memory:
-        user_memory[user_id].clear()  
-    return
 
 @app.route('/query', methods=['POST'])
 async def query():
