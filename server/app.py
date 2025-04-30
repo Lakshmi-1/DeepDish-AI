@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from rag import query_cypher
 from langchain.memory import ConversationBufferMemory
-from NER import build_patterns, extract_recipe_criteria
+from NER import build_patterns, extract_recipe_criteria, extract_restaurant_criteria
 from basicChatStructure import intent_parser, get_last_k_messages
 
 app = Flask(__name__)
@@ -96,7 +96,7 @@ user_question:{user_query}"""
         try:
             # Get lemmatized ingredients using NER
             doc = nlp(user_query)
-            criteria = extract_recipe_criteria(doc, allergies)
+            criteria = extract_restaurant_criteria(doc, allergies)
 
             ingredients = criteria.get("ingredients", [])
 
