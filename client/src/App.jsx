@@ -34,6 +34,7 @@ function App() {
   const [city, setCity] = useState('');
   const [fullBotResponse, setFullBotResponse] = useState('');
   const [visibleBotResponse, setVisibleBotResponse] = useState('');
+  const [locationEnabled, setLocationEnabled] = useState(true);
 
   const messagesEndRef = useRef(null);
   const popupRef = useRef();
@@ -113,6 +114,19 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+  if (!navigator.permissions) return;
+
+  navigator.permissions.query({ name: 'geolocation' }).then((permissionStatus) => {
+    permissionStatus.onchange = () => {
+      if (permissionStatus.state === 'granted') {
+        getLocation();
+      }
+    };
+  });
+}, []);
+
+
   const getMessageClass = (text) => {
     const lines = text.split('\n').length;
     const t = Math.floor(text.length / 30);
@@ -141,6 +155,8 @@ function App() {
   };
 
   const getLocation = () => {
+    console.log('getting location.')
+    if (!locationEnabled) return;
     setLocation(null);
     setLocationError(false);
     if (navigator.geolocation) {
@@ -158,6 +174,7 @@ function App() {
               const cityName = data.address.city || data.address.town || data.address.village || data.address.state;
               setCity(cityName);
             }
+            console.log('Location set:', lat, lon);
           } catch (error) {
             console.error('Error fetching city name:', error);
           }
@@ -224,27 +241,50 @@ function App() {
               className="w-full p-2 border rounded mb-4"
             />
 
-            <div className="text-sm text-black ml-1 mb-4">
-              {location ? (
-                <div className="flex items-center space-x-2">
-                  <span>📍</span>
-                  {city ? (
-                    <span>{city}</span>
-                  ) : (
-                    <span>Lat: {location.latitude.toFixed(2)}, Lon: {location.longitude.toFixed(2)}</span>
-                  )}
-                </div>
-              ) : locationError ? (
-                <button
-                  onClick={getLocation}
-                  className="px-2 py-1 bg-white text-black rounded shadow hover:bg-gray-200 text-xs"
-                >
-                  Enable Location
-                </button>
-              ) : (
-                <p>Loading location...</p>
-              )}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-black text-sm">Location Access:</p>
+              <button
+                onClick={() => {
+                  const newState = !locationEnabled;
+                  setLocationEnabled(newState);
+                  if (!newState) {
+                    setLocation(null);
+                    setCity('');
+                  } else {
+                    getLocation();
+                  }
+                }}
+                className={`px-2 py-1 rounded text-xs ${
+                  locationEnabled
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+                }`}
+              >
+                {locationEnabled ? 'Disable' : 'Enable'}
+              </button>
             </div>
+
+
+            <div className="text-sm text-black ml-1 mb-4">
+              {!locationEnabled ? (
+                  <p className="text-gray-500 italic">Location disabled</p>
+                ) : location ? (
+                  <div className="flex items-center space-x-2">
+                    <span>📍</span>
+                    {city ? (
+                      <span>{city}</span>
+                    ) : (
+                      <span>Lat: {location.latitude.toFixed(2)}, Lon: {location.longitude.toFixed(2)}</span>
+                    )}
+                  </div>
+                ) : locationError ? (
+                      <p className="text-red-600 italic">Enable location in browser settings</p>
+                    ) : (
+                  <p>Loading location...</p>
+                )}
+
+            </div>
+
             <div className="flex justify-end">
               <button
                 onClick={() => setShowPopup(false)}
