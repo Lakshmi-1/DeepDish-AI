@@ -7,21 +7,6 @@ import { faArrowUp, faSquare } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
-  useEffect(() => {
-    const resetMemory = async () => {
-      try {
-        await fetch('http://127.0.0.1:8080/reset_memory', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (error) {
-        console.error('Error resetting memory:', error);
-      }
-    };
-
-    resetMemory();
-  }, []);
-
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -42,12 +27,8 @@ function App() {
   const textareaRefBottom = useRef();
 
   useEffect(() => {
-    getLocation();
-  }, []);
-
-  useEffect(() => {
     const handleClickOutside = (event) => {
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
+      if (event.button !== 2 && popupRef.current && !popupRef.current.contains(event.target)) {
         setShowPopup(false);
       }
     };
@@ -62,14 +43,17 @@ function App() {
   }, [showPopup]);
 
   useEffect(() => {
-    const handleClick = () => {
-      if (initial) setInitial(false);
+    const handleClick = (event) => {
+      const inputForm = document.getElementById('init_query_form');
+      if (event.button !== 2 && initial && inputForm && !inputForm.contains(event.target)) {
+        setInitial(false);
+      }
     };
-
+  
     if (initial) {
       document.addEventListener('mousedown', handleClick);
     }
-
+  
     return () => {
       document.removeEventListener('mousedown', handleClick);
     };
@@ -78,12 +62,6 @@ function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
-
-
-  const disableLocation = () => {
-    setLocation(null);
-    setCity('');
-  };
 
   const handleQueryChange = (e) => setQuery(e.target.value);
 
@@ -152,11 +130,13 @@ function App() {
   }, [messages, loading]);
 
   useEffect(() => {
-    const stopWatching = getLocation();
-    return () => {
-      if (stopWatching) stopWatching();
-    };
-  }, []);
+    if (locationEnabled) {
+      getLocation();
+    } else {
+      setLocation(null);
+      setCity('');
+    }
+  }, [locationEnabled]);
 
   useEffect(() => {
   if (!navigator.permissions) return;
@@ -199,40 +179,32 @@ function App() {
   };
 
   const getLocation = () => {
-    console.log('getting location.')
-    if (!locationEnabled) return;
-    setLocation(null);
-    setLocationError(false);
-    if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          setLocation({ latitude: lat, longitude: lon });
-          setLocationError(false);
-
-          try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-            const data = await response.json();
-            if (data.address) {
-              const cityName = data.address.city || data.address.town || data.address.village || data.address.state;
-              setCity(cityName);
-            }
-            console.log('Location set:', lat, lon);
-          } catch (error) {
-            console.error('Error fetching city name:', error);
-          }
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setLocationError(true);
+    if (!locationEnabled || !navigator.geolocation) return;
+  
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        setLocation({ latitude: lat, longitude: lon });
+        setLocationError(false);
+  
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+          const data = await response.json();
+          const cityName = data.address?.city || data.address?.town || data.address?.village || data.address?.state;
+          setCity(cityName);
+          
+        } catch (error) {
+          console.error('Error fetching city name:', error);
         }
-      );
-      return () => navigator.geolocation.clearWatch(watchId);
-    } else {
-      console.error('Geolocation not supported');
-      setLocationError(true);
-    }
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setLocationError(true);
+      }
+    );
+  
+    return () => navigator.geolocation.clearWatch(watchId);
   };
 
   return (
@@ -286,7 +258,7 @@ function App() {
             />
 
             <div className="flex items-center justify-between mb-4">
-              <p className="text-black text-sm">Location Access:</p>
+              <p className="text-black">Location Access:</p>
               <button
                 onClick={() => {
                   const newState = !locationEnabled;
@@ -384,7 +356,7 @@ function App() {
             <img src={pizzaIcon} className="w-[100px] h-[100px] mb-4" />
             <h1 className="text-4xl font-bold mb-4 text-black">Welcome to DeepDish AI!</h1>
             <h2 className="text-2xl font-semibold mb-4 text-black">How can I help you?</h2>
-            <form onSubmit={handleSubmit} className="w-full max-w-xl px-4">
+            <form id="init_query_form" onSubmit={handleSubmit} className="w-full max-w-xl px-4">
               <div className="flex gap-2">
                 <div className="flex-1 bg-gray-200 rounded-lg p-2 flex">
                   <textarea
@@ -422,6 +394,7 @@ function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             transition={{ duration: 0.5 }}
+            id="regular_query_form"
             onSubmit={handleSubmit}
             className="fixed bottom-0 w-full flex items-center bg-white justify-center px-4 pb-4 z-50"
           >
