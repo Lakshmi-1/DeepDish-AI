@@ -41,6 +41,82 @@ function App() {
   const textareaRef = useRef();
   const textareaRefBottom = useRef();
 
+  useEffect(() => {
+    getLocation();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        setShowPopup(false);
+      }
+    };
+
+    if (showPopup) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPopup]);
+
+  useEffect(() => {
+    const handleClick = () => {
+      if (initial) setInitial(false);
+    };
+
+    if (initial) {
+      document.addEventListener('mousedown', handleClick);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [initial]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      setLocationLoading(true);
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setLocation({ latitude: lat, longitude: lon });
+
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await response.json();
+            if (data.address) {
+              const cityName = data.address.city || data.address.town || data.address.village || data.address.state;
+              setCity(cityName);
+            }
+          } catch (error) {
+            console.error('Error fetching city name:', error);
+          } finally {
+            setLocationLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setLocationLoading(false);
+        }
+      );
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      console.error('Geolocation not supported');
+    }
+  };
+
+  const disableLocation = () => {
+    setLocation(null);
+    setCity('');
+  };
+
   const handleQueryChange = (e) => setQuery(e.target.value);
 
   const fetchQueryResult = async () => {
@@ -136,13 +212,13 @@ function App() {
   const revealBotResponse = (text) => {
     const words = text.split(' ');
     let index = 0;
-  
+
     const reveal = () => {
-      const chunkSize = Math.floor(Math.random() * 4) + 1; // Reveal 1-4 words
+      const chunkSize = Math.floor(Math.random() * 4) + 1;
       const nextChunk = words.slice(index, index + chunkSize).join(' ');
       setVisibleBotResponse(prev => prev ? `${prev} ${nextChunk}` : nextChunk);
       index += chunkSize;
-  
+
       if (index >= words.length) {
         clearInterval(timer);
         setMessages(prev => [...prev, { sender: 'bot', text }]);
@@ -150,7 +226,7 @@ function App() {
         setLoading(false);
       }
     };
-  
+
     const timer = setInterval(reveal, 200);
   };
 
@@ -284,7 +360,6 @@ function App() {
                 )}
 
             </div>
-
             <div className="flex justify-end">
               <button
                 onClick={() => setShowPopup(false)}
@@ -385,20 +460,20 @@ function App() {
             <div className="w-full max-w-3xl flex gap-2">
               <div className="flex-1 outline bg-gray-200 rounded-lg p-2 flex">
                 <textarea
-                    ref={textareaRefBottom}
-                    value={query}
-                    onChange={handleQueryChange}
-                    onInput={handleTextareaInputBottom}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSubmit(e);
-                      }
-                    }}
-                    className="w-full p-2 bg-transparent focus:outline-none resize-none"
-                    placeholder="Type your message..."
-                    rows="1"
-                  />
+                  ref={textareaRefBottom}
+                  value={query}
+                  onChange={handleQueryChange}
+                  onInput={handleTextareaInputBottom}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  className="w-full p-2 bg-transparent focus:outline-none resize-none"
+                  placeholder="Type your message..."
+                  rows="1"
+                />
               </div>
               <div className="flex items-end">
                 <button
