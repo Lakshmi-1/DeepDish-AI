@@ -33,37 +33,51 @@ async def query():
     memory = user_memory[user_id]
     memory.chat_memory.add_user_message(user_query)
 
-    #memory_pass = str(get_last_k_messages(memory))
-    global_intent = conservational_intent_parser.parse_global_user_intent(user_query)
+    memory_pass = str(get_last_k_messages(memory))
+    #print(memory_pass)
+    relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
+    #print(memory_pass)
+    #print(relevant_context)
+    new_user_query = f"""relevant context from previous conversation:{relevant_context}
+    user_question:{user_query}
+"""
+    global_intent = conservational_intent_parser.parse_global_user_intent(new_user_query)
+
     print(global_intent)
 
     if global_intent.strip().lower() == 'greetings':
-        temp = conservational_intent_parser.respond_to_greeting(user_query) 
+        temp = conservational_intent_parser.respond_to_greeting(user_query)
+        memory.chat_memory.add_ai_message(str(temp)) 
         return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'quit chat':
-        temp = conservational_intent_parser.respond_to_quit_chat(user_query) 
+        temp = conservational_intent_parser.respond_to_quit_chat(user_query)
+        memory.chat_memory.add_ai_message(str(temp)) 
         return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'express gratitude':
-        temp = conservational_intent_parser.respond_to_gratitude(user_query) 
+        temp = conservational_intent_parser.respond_to_gratitude(user_query)
+        memory.chat_memory.add_ai_message(str(temp)) 
         return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'ask a question':
         print('entering question pipeline')
-        memory_pass = str(get_last_k_messages(memory))
+        #memory_pass = str(get_last_k_messages(memory))
         temp = conservational_intent_parser.respond_to_question(memory_pass)
         if temp.strip().lower() == 'non food related question':
             print('entering non food related')
-            temp = conservational_intent_parser.respond_to_NonFood_question(user_query) 
+            temp = conservational_intent_parser.respond_to_NonFood_question(user_query)
+            memory.chat_memory.add_ai_message(str(temp)) 
             return jsonify({"result": {"result": temp}})
         elif temp.strip().lower() == 'food related question':
             print('entering food related')
-            relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
+            #relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}
 """
-            temp = conservational_intent_parser.respond_to_food_question(new_user_query) 
+            temp = conservational_intent_parser.respond_to_food_question(new_user_query)
+            memory.chat_memory.add_ai_message(str(temp)) 
             return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'other':
         temp = conservational_intent_parser.respond_to_other(user_query)
+        memory.chat_memory.add_ai_message(str(temp))
         return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'find a recipe':
         try:
@@ -79,7 +93,7 @@ user_question:{user_query}
             #question_with_memory = chat_history_str + f"\nUser: {criteria}"
 
             memory_pass = str(get_last_k_messages(memory)) + f"\nUser: {criteria}"
-            relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
+            #relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}"""
 
