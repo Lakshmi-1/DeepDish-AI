@@ -96,10 +96,12 @@ function App() {
         revealBotResponse(fullText);
       } else {
         setMessages((prev) => [...prev, { sender: 'bot', text: 'No results found.' }]);
+        setLoading(false)
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setMessages((prev) => [...prev, { sender: 'bot', text: 'An error occurred while fetching data.' }]);
+      setLoading(false)
     }
   };
 
