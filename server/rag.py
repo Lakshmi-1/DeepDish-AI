@@ -37,48 +37,6 @@ graph = Neo4jGraph(
 )
 
 # Define Cypher Generation and QA Prompts using dynamic schema
-CYPHER_GENERATION_TEMPLATE = """
-Role:
-You are an expert Neo4j Developer generating Cypher queries based on the provided schema and given input dictionary. Assume the user wants a real answer unless the question is clearly just "hello" or "hi". Do NOT define custom functions. Do NOT filter out real queries.
-
-
-Guidelines:
-Use Only Explicit Relationships & Constraints
-
-Do not add extra relationships unless the question explicitly requires them.
-
-If the user asks about food without specifying, assume they mean recipes.
-
-Ensure Case Insensitivity for All Node Properties
-
-Use toLower() to match property values.
-
-Handle and spelling or grammar errors in the user query before processing.
-
-Properly account for all of the user's allergies in the cypher query.
-
-Always MATCH the ingredients of a recipe and use WHERE NOT toLower(i.name) IN [...] for any allergies the user provides you. 
-
-Do not use WHERE toLower(i.name) NOT IN [...].
-
-Some input keys can be empty.
-
-
-Example:
-MATCH (r:Recipe)-[:BELONGS_TO]->(c:Category),
-    (r)-[:CONTAINS]->(i:Ingredient)
-WHERE toLower(c.value) IN ["dessert"]
-AND toLower(i.name) IN ["strawberry"]
-AND NOT toLower(i.name) IN ["avocado"]
-RETURN r.name AS RecipeName;
-
-Schema:
-{schema}
-
-User Question:
-{question}
-"""
-
 CYPHER_GENERATION_TEMPLATE_RECIPE = """
 Role:
 You are an expert Neo4j Developer generating recipe Cypher queries based on the provided schema.
@@ -103,11 +61,20 @@ Use toLower() or case-insensitive regex ((?i)) to match property values.
 
 Handle and spelling or grammar errors in the user query before processing. All stopword removal has be done for you
 
+Properly account for all of the user's allergies in the cypher query.
+
+Always MATCH the ingredients of a recipe and use WHERE NOT toLower(i.name) IN [...] for any allergies the user provides you. 
+
+Do not use WHERE toLower(i.name) NOT IN [...].
+
+Some input keys can be empty.
+
 Example:
 MATCH (r:Recipe)-[:BELONGS_TO]->(c:Category),
     (r)-[:CONTAINS]->(i:Ingredient)
-WHERE toLower(c.value) IN ["dessert", "desserts"]
-AND toLower(i.name) IN ["strawberry", "strawberries"]
+WHERE toLower(c.value) IN ["dessert"]
+AND toLower(i.name) IN ["strawberry"]
+AND NOT toLower(i.name) IN ["avocado"]
 RETURN r.name AS RecipeName;
 
 Schema:
@@ -125,6 +92,8 @@ Guidelines:
 
 Use Only Explicit Relationships & Constraints
 
+If a city is provided to you, check that the restaurant is in that city using the address property.
+
 Do not add extra relationships unless the question explicitly requires them.
 
 Check Singular & Plural Forms for Node Properties
@@ -135,9 +104,12 @@ Use toLower() or case-insensitive regex ((?i)) to match property values.
 
 Handle and spelling or grammar errors in the user query before processing. All stopword removal has be done for you
 
+Some input keys can be empty.
+
 Example:
-MATCH (n:Restaurant)-[:HAS_TYPE]->(t:Type), (n)-[:HAS_RATING]->(r:Rating)
+MATCH (n:Restaurant)-[:HAS_TYPE]->(t:Type)
 WHERE toLower(t.type) in ['donuts']
+AND n.address CONTAINS "Plano"
 RETURN n.name AS RestaurantName
 
 Schema:
@@ -156,11 +128,6 @@ CYPHER_GENERATION_PROMPT_RESTURANTS = PromptTemplate(
     template=CYPHER_GENERATION_TEMPLATE_RESTURANTS
 )
 
-CYPHER_GENERATION_PROMPT = PromptTemplate(
-    input_variables=["schema", "question"],
-    template=CYPHER_GENERATION_TEMPLATE
-)
-
 CYPHER_QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template="""
@@ -175,15 +142,6 @@ Refer to the user in the second person.
 Question: {question}
 Context: {context}
 """
-)
-
-graph_chain = GraphCypherQAChain.from_llm(
-    ChatOpenAI(model="gpt-4o-mini", temperature=0),
-    graph=graph,
-    qa_prompt=CYPHER_QA_PROMPT,
-    cypher_prompt=CYPHER_GENERATION_PROMPT,
-    verbose=True,
-    allow_dangerous_requests=True
 )
 
 graph_chain_recipe = GraphCypherQAChain.from_llm(
@@ -204,15 +162,12 @@ graph_chain_resturants = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
-async def query_cypher(query, graph_intent, criteria=None, city=None, name=None):
+async def query_cypher(query, graph_intent, criteria=None, name=None):
     query += str(criteria)
     if name:
         query = f"Address the user by their name, {name}, when answering.\n" + query
-    if city:
-        query += f"\nRestrict restaurant queries to the city: {city}."
 
     if graph_intent == 'find a recipe':
         return graph_chain_recipe.invoke({"query": query})
     else:
         return graph_chain_resturants.invoke({"query": query})
-    #return graph_chain.invoke({"query": query})

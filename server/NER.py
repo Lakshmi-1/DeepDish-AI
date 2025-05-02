@@ -119,7 +119,7 @@ def extract_recipe_criteria(doc, allergies):
 # This function will use the doc object (list of individual words/entities) to extract key information from a user query
 # This will be called any time the user asks a question about restaurants
 # Return value is a dictionary of the key information: cuisine, rating, time, and allergies
-def extract_restaurant_criteria(doc, allergies):
+def extract_restaurant_criteria(doc, city):
     # initialize variables
     cuisine = []
     rating = None
@@ -142,5 +142,5 @@ def extract_restaurant_criteria(doc, allergies):
         "cuisine": cuisine,
         "min_rating": rating,
         "max_time": time,
-        "allergies": allergies
+        "city": city
     }

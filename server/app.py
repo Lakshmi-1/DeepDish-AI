@@ -85,8 +85,6 @@ user_question:{user_query}
             doc = nlp(user_query)
             criteria = extract_recipe_criteria(doc, allergies)
 
-            ingredients = criteria.get("ingredients", [])
-
             # Await the async query_cypher function
             #chat_history_msgs = memory.load_memory_variables({})["chat_history"]
             #chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
@@ -97,7 +95,7 @@ user_question:{user_query}
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}"""
 
-            result = await query_cypher(new_user_query, 'find a recipe', criteria, city=city, name=name) #await query_cypher(question_with_memory, criteria, city=city, name=name)
+            result = await query_cypher(new_user_query, 'find a recipe', criteria, name=name)
 
             # Save AI response to memory
             memory.chat_memory.add_ai_message(str(result))
@@ -110,9 +108,7 @@ user_question:{user_query}"""
         try:
             # Get lemmatized ingredients using NER
             doc = nlp(user_query)
-            criteria = extract_restaurant_criteria(doc, allergies)
-
-            ingredients = criteria.get("ingredients", [])
+            criteria = extract_restaurant_criteria(doc, city)
 
             # Await the async query_cypher function
             #chat_history_msgs = memory.load_memory_variables({})["chat_history"]
@@ -124,7 +120,7 @@ user_question:{user_query}"""
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}"""
 
-            result = await query_cypher(new_user_query, 'find a restaurant', criteria, city=city, name=name) #await query_cypher(question_with_memory, criteria, city=city, name=name)
+            result = await query_cypher(new_user_query, 'find a restaurant', criteria, name=name)
 
             # Save AI response to memory
             memory.chat_memory.add_ai_message(str(result))
