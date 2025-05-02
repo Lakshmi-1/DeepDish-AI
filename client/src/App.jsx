@@ -7,6 +7,21 @@ import { faArrowUp, faSquare } from '@fortawesome/free-solid-svg-icons';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
+  useEffect(() => {
+    const resetMemory = async () => {
+      try {
+        await fetch('http://127.0.0.1:8080/reset_memory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('Error resetting memory:', error);
+      }
+    };
+  
+    resetMemory();
+  }, []);
+  
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -17,9 +32,6 @@ function App() {
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState(false);
   const [city, setCity] = useState('');
-
-
-
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -38,8 +50,11 @@ function App() {
       const response = await fetch('http://127.0.0.1:5000/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
+        body: JSON.stringify({ query, allergies: allergiesPopupInput
+          .split(',')
+          .map(item => item.trim())
+          .filter(item => item.length > 0), })
+        });
 
       const data = await response.json();
       if (data.result) {

@@ -20,9 +20,17 @@ def test():
 #decalres intent parser object 
 conservational_intent_parser = intent_parser()
 
+@app.route('/reset_memory', methods=['POST'])
+def reset_memory():
+    user_id = request.remote_addr
+    if user_id in user_memory:
+        user_memory[user_id].clear()  
+    return
+
 @app.route('/query', methods=['POST'])
 async def query():
     user_query = request.json.get('query', '')
+    allergies = request.json.get('allergies', '')
     user_id = request.remote_addr
 
     if not user_query:
@@ -68,14 +76,13 @@ async def query():
         try:
             # Get lemmatized ingredients using NER
             doc = nlp(user_query)
-            criteria = extract_recipe_criteria(doc)
+            criteria = extract_recipe_criteria(doc, allergies)
 
-            # Await the async query_cypher function
             chat_history_msgs = memory.load_memory_variables({})["chat_history"]
             chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
-            question_with_memory = chat_history_str + f"\nUser: {user_query}"
+            question_with_memory = chat_history_str + f"\nUser: {criteria}"
 
-            result = await query_cypher({"query": question_with_memory}, criteria)
+            result = await query_cypher(question_with_memory, criteria)
 
             # Save AI response to memory
             memory.chat_memory.add_ai_message(str(result))
