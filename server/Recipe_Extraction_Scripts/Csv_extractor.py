@@ -171,11 +171,6 @@ def save_results_to_neo4j(data):
 directory_path = r"C:\Users\lalit\Desktop\DeepDish-AI\server\data"  
 output_file = "standardized_recipes.json"
 
-# results = process_files_in_directory(directory_path)
+results = process_files_in_directory(directory_path)
 
-# with open(output_file, "a", encoding="utf-8") as f:
-#     json.dump(results, f, indent=4)
-
-with open(output_file, "r", encoding="utf-8") as f:
-    data = json.load(f)
-save_results_to_neo4j(data)
+save_results_to_neo4j(results)
