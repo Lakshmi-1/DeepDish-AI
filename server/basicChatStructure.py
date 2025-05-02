@@ -109,5 +109,4 @@ class intent_parser(object):
     current question: {current_query}"""
     find_info = ask_openai(user_input, system_instruction)
 
-    return find_info 
-     
+    return find_info

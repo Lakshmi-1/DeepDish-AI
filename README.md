@@ -7,12 +7,13 @@ DeepDish-AI is an intelligent, food-focused chatbot designed to assist users wit
 
 ## How to Run
 1) Clone the git repo
+2) Setup a .env file with an OPENAI_API_KEY, NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD
 2) Run the command 'pip install -r requirements.txt'
 3) Navigate into the client folder and run the 'npm install' command.
 4) Use the 'npm run dev' command to start localhost.
 5) Open a new terminal
 6) Navigate into the server folder and use the 'flask run' command.
-7) Provide an OpenAI key to the program when prompted
+7) Provide an OpenAI key, Neo4j uri, Neo4j username, and Neo4j password to the program when prompted
 8) Open the application in your browser
 9) Happy chatting 😊
 
@@ -41,7 +42,7 @@ Enable users to personalize their experience:
 
 ## Notes
 - For more details on the project, please refer to the report.
-- The files inside server/Recipe_Extraction_Scripts can be used to upload more recipes into your own Neo4j graph instance.
+- The files inside server/Recipe_Extraction_Scripts can be used to upload recipes into your own Neo4j graph instance.
 
 ## Attributions
 Pizza Icon & Utensil Background created by Freepik

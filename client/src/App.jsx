@@ -15,7 +15,7 @@ function App() {
   const [namePopupInput, setNamePopupInput] = useState('');
   const [allergiesPopupInput, setAllergiesPopupInput] = useState('');
   const [location, setLocation] = useState(null);
-  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState(false);
   const [city, setCity] = useState('');
   const [fullBotResponse, setFullBotResponse] = useState('');
   const [visibleBotResponse, setVisibleBotResponse] = useState('');
@@ -78,14 +78,14 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query,
-          allergies: allergiesPopupInput
-            .split(',')
-            .map(item => item.trim())
-            .filter(item => item.length > 0),
+           query,
+           allergies: allergiesPopupInput
+          .split(',')
+          .map(item => item.trim())
+          .filter(item => item.length > 0),
           city: city,
           name: namePopupInput
-        }),
+          }),
       });
 
       const data = await response.json();
@@ -96,12 +96,12 @@ function App() {
         revealBotResponse(fullText);
       } else {
         setMessages((prev) => [...prev, { sender: 'bot', text: 'No results found.' }]);
-        setLoading(false);
+        setLoading(false)
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setMessages((prev) => [...prev, { sender: 'bot', text: 'An error occurred while fetching data.' }]);
-      setLoading(false);
+      setLoading(false)
     }
   };
 
@@ -118,7 +118,7 @@ function App() {
   };
 
   const handleTextareaInput = () => {
-    textareaRef.current.style.height = 'auto';
+    textareaRef.current.style.height = 'auto';  
     textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`;
   };
 
@@ -302,7 +302,6 @@ function App() {
                 )}
 
             </div>
-
             <div className="flex justify-end">
               <button
                 onClick={() => setShowPopup(false)}
@@ -333,6 +332,7 @@ function App() {
               </p>
             </div>
           )}
+
           {visibleBotResponse && (
             <div className="flex justify-start">
               <p className="px-4 py-2 bg-gray-300 text-black rounded-lg break-words whitespace-pre-wrap max-w-[500px] transition-all duration-300">
@@ -358,7 +358,6 @@ function App() {
             <img src={pizzaIcon} className="w-[100px] h-[100px] mb-4" />
             <h1 className="text-4xl font-bold mb-4 text-black">Welcome to DeepDish AI!</h1>
             <h2 className="text-2xl font-semibold mb-4 text-black">How can I help you?</h2>
-            <form id="chatbotMssg" onSubmit={handleSubmit} className="w-full max-w-xl px-4">
             <form id="init_query_form" onSubmit={handleSubmit} className="w-full max-w-xl px-4">
               <div className="flex gap-2">
                 <div className="flex-1 bg-gray-200 rounded-lg p-2 flex">
@@ -397,7 +396,6 @@ function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             transition={{ duration: 0.5 }}
-            id="chatbotMssg"
             id="regular_query_form"
             onSubmit={handleSubmit}
             className="fixed bottom-0 w-full flex items-center bg-white justify-center px-4 pb-4 z-50"

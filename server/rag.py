@@ -5,14 +5,13 @@ from langchain_community.graphs import Neo4jGraph
 from dotenv import load_dotenv
 import getpass
 import os
-import getpass
 
 load_dotenv()
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 neo4j_uri = os.getenv('NEO4J_URI')
 neo4j_username = os.getenv('NEO4J_USERNAME')
-neo4j_password = os.os.getenv('NEO4J_PASSWORD')
+neo4j_password = os.getenv('NEO4J_PASSWORD')
 
 if openai_api_key is None:
     openai_api_key = getpass.getpass("Please enter your OpenAI API key: ")
