@@ -3,6 +3,7 @@ from langchain.chains import GraphCypherQAChain
 from langchain_core.prompts.prompt import PromptTemplate
 from langchain.graphs import Neo4jGraph
 from dotenv import load_dotenv
+import getpass
 import os
 
 load_dotenv()
