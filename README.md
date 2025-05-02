@@ -40,7 +40,8 @@ Enable users to personalize their experience:
 - Location: Enables the chatbot to make tailored local restaurant recommendations.
 
 ## Notes
-For more details on the project, please refer to the report.
+- For more details on the project, please refer to the report.
+- The files inside server/Recipe_Extraction_Scripts can be used to upload more recipes into your own Neo4j graph instance.
 
 ## Attributions
 Pizza Icon & Utensil Background created by Freepik
