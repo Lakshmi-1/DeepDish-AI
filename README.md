@@ -6,9 +6,9 @@ Youtube Demo Link:
 DeepDish-AI is an intelligent, food-focused chatbot designed to assist users with recipe discovery and restaurant recommendations through a conversational interface. Whether you're planning a home-cooked meal or looking for a great place to eat nearby, DeepDish-AI provides fast, personalized, and context-aware suggestions.  By leveraging OpenAI's language models and integrating both recipe and location-based restaurant data, the chatbot delivers highly relevant results tailored to the user's dietary needs, preferences, and location.
 
 ## How to Run
-1) Clone the git repo
-2) Create a free Neo4j graph instance here: [Neo4j AuraDB](https://neo4j.com/docs/aura/classic/auradb/getting-started/create-database/)
-3) Load the neo4j .backup file into your instance using this path: ... > Backup & Restore > Restore from Backup File
+1) Create a free Neo4j graph instance here: [Neo4j AuraDB](https://neo4j.com/docs/aura/classic/auradb/getting-started/create-database/)
+2) Load the neo4j snapshot from the .backup file into your instance using this path: ... > Backup & Restore > Restore from Backup File
+3) Clone the git repo
 4) Setup a .env file with your OPENAI_API_KEY, NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD (The the program will prompt for these if they are not configured)
 5) Run the command 'pip install -r requirements.txt'
 6) Run the command 'python -m spacy download en_core_web_sm'
@@ -16,9 +16,8 @@ DeepDish-AI is an intelligent, food-focused chatbot designed to assist users wit
 8) Use the 'npm run dev' command to start localhost.
 9) Open a new terminal
 10) Navigate into the server folder and use the 'flask run' command.
-11) Provide an OpenAI key, Neo4j uri, Neo4j username, and Neo4j password to the program when prompted
-12) Open the application in your browser
-13) Happy chatting 😊
+11) Open the application in your browser
+12) Happy chatting 😊
 
 ## Features
 **Recipe Search**
@@ -45,7 +44,7 @@ Enable users to personalize their experience:
 
 ## Notes
 - For more details on the project, please refer to the report.
-- The files inside server/Recipe_Extraction_Scripts can be used to upload more recipes into your own Neo4j graph instance.
+- The files inside server/Recipe_Extraction_Scripts can be used as a template to upload more recipes into your own Neo4j graph instance.
 - Please note that our code may or may not be fully compatible with customized configurations beyond those provided in the snapshot.
 
 ## Attributions
