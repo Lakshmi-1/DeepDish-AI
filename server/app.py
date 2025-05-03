@@ -40,9 +40,8 @@ async def query():
     new_user_query = f"""relevant context from previous conversation:{relevant_context}
     user_question:{user_query}
 """
+    # Get the user's intent and direct to appropriate pipeline for further processing
     global_intent = conservational_intent_parser.parse_global_user_intent(new_user_query)
-
-    print(global_intent)
 
     if global_intent.strip().lower() == 'greetings':
         temp = conservational_intent_parser.respond_to_greeting(user_query)
@@ -83,7 +82,6 @@ user_question:{user_query}
             criteria = extract_recipe_criteria(doc, allergies)
 
             # Await the async query_cypher function
-
             memory_pass = str(get_last_k_messages(memory)) + f"\nUser: {criteria}"
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}"""
