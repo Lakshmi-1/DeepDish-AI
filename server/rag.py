@@ -13,6 +13,7 @@ neo4j_uri = os.getenv('NEO4J_URI')
 neo4j_username = os.getenv('NEO4J_USERNAME')
 neo4j_password = os.getenv('NEO4J_PASSWORD')
 
+# Get necessary config variables from user if not in 
 if openai_api_key is None:
     openai_api_key = getpass.getpass("Please enter your OpenAI API key: ")
     os.environ["OPENAI_API_KEY"] = openai_api_key
@@ -144,6 +145,7 @@ Context: {context}
 """
 )
 
+# Define the graph chains for recipes and restaurants
 graph_chain_recipe = GraphCypherQAChain.from_llm(
     ChatOpenAI(model="gpt-4o-mini", temperature=0),
     graph=graph,
@@ -162,6 +164,7 @@ graph_chain_resturants = GraphCypherQAChain.from_llm(
     allow_dangerous_requests=True
 )
 
+# Query the graph with the criteria
 async def query_cypher(query, graph_intent, criteria=None, name=None):
     query += str(criteria)
     if name:

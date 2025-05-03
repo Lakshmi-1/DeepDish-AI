@@ -34,10 +34,9 @@ async def query():
     memory.chat_memory.add_user_message(user_query)
 
     memory_pass = str(get_last_k_messages(memory))
-    #print(memory_pass)
+    
+    # Get the relevant context from the query given the memory
     relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
-    #print(memory_pass)
-    #print(relevant_context)
     new_user_query = f"""relevant context from previous conversation:{relevant_context}
     user_question:{user_query}
 """
@@ -59,7 +58,6 @@ async def query():
         return jsonify({"result": {"result": temp}})
     elif global_intent.strip().lower() == 'ask a question':
         print('entering question pipeline')
-        #memory_pass = str(get_last_k_messages(memory))
         temp = conservational_intent_parser.respond_to_question(memory_pass)
         if temp.strip().lower() == 'non food related question':
             print('entering non food related')
@@ -68,7 +66,6 @@ async def query():
             return jsonify({"result": {"result": temp}})
         elif temp.strip().lower() == 'food related question':
             print('entering food related')
-            #relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}
 """
@@ -86,12 +83,8 @@ user_question:{user_query}
             criteria = extract_recipe_criteria(doc, allergies)
 
             # Await the async query_cypher function
-            #chat_history_msgs = memory.load_memory_variables({})["chat_history"]
-            #chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
-            #question_with_memory = chat_history_str + f"\nUser: {criteria}"
 
             memory_pass = str(get_last_k_messages(memory)) + f"\nUser: {criteria}"
-            #relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}"""
 
@@ -111,12 +104,7 @@ user_question:{user_query}"""
             criteria = extract_restaurant_criteria(doc, city)
 
             # Await the async query_cypher function
-            #chat_history_msgs = memory.load_memory_variables({})["chat_history"]
-            #chat_history_str = "\n".join([msg.content for msg in chat_history_msgs])
-            #question_with_memory = chat_history_str + f"\nUser: {criteria}"
-
             memory_pass = str(get_last_k_messages(memory)) + f"\nUser: {criteria}"
-            relevant_context = conservational_intent_parser.find_relevant_information(user_query, memory_pass)
             new_user_query = f"""relevant context from previous conversation:{relevant_context}
 user_question:{user_query}"""
 
