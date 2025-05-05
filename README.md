@@ -1,5 +1,4 @@
 # DeepDish-AI
-Github Repo Link: https://github.com/Lakshmi-1/DeepDish-AI/
 Youtube Demo Link: 
 
 ## Overview
