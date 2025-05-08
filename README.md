@@ -8,7 +8,7 @@ DeepDish-AI is an intelligent, food-focused chatbot designed to assist users wit
 1) Create a free Neo4j graph instance here: [Neo4j AuraDB](https://neo4j.com/docs/aura/classic/auradb/getting-started/create-database/)
 2) Load the neo4j snapshot from the .backup file into your instance using this path: ... > Backup & Restore > Restore from Backup File
 3) Clone the git repo
-4) Setup a .env file with your OPENAI_API_KEY, NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD (The the program will prompt for these if they are not configured)
+4) Setup a .env file with your OPENAI_API_KEY, NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD (The program will prompt for these if they are not configured)
 5) Run the command 'pip install -r requirements.txt'
 6) Run the command 'python -m spacy download en_core_web_sm'
 7) Navigate into the client folder and run the 'npm install' command.
